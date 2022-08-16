@@ -18,11 +18,16 @@
 package com.nimbusds.jose;
 
 
+import java.text.ParseException;
+import java.util.Date;
+
 import junit.framework.TestCase;
 
 import com.nimbusds.jose.util.StandardCharset;
 import com.nimbusds.jwt.JWTClaimsSet;
+import com.nimbusds.jwt.PlainJWT;
 import com.nimbusds.jwt.SignedJWT;
+import com.nimbusds.jwt.util.DateUtils;
 
 
 /**
@@ -53,8 +58,7 @@ public class PayloadTest extends TestCase {
 	}
 
 
-	public void testJWSObjectFromString()
-		throws Exception {
+	public void testJWSObjectFromString() {
 
 		// From http://tools.ietf.org/html/rfc7515#appendix-A.1
 		String s = "eyJ0eXAiOiJKV1QiLA0KICJhbGciOiJIUzI1NiJ9" +
@@ -160,5 +164,25 @@ public class PayloadTest extends TestCase {
 		Integer out = payload.toType(transformer);
 
 		assertEquals(new Integer(10), out);
+	}
+	
+	
+	public void testJWTClaimsSetPayloadWithTimestampClaim() throws ParseException {
+		
+		Date authTime = DateUtils.fromSecondsSinceEpoch(1518022800);
+		
+		JWTClaimsSet jwtClaimsSet = new JWTClaimsSet.Builder()
+			.claim("auth_time", authTime)
+			.build();
+		
+		PlainJWT plainJWT = new PlainJWT(jwtClaimsSet);
+		
+		String jwt = plainJWT.serialize();
+		
+		plainJWT = PlainJWT.parse(jwt);
+		
+		Payload payload = plainJWT.getPayload();
+		
+		assertEquals("{\"auth_time\":1518022800}", payload.toString());
 	}
 }

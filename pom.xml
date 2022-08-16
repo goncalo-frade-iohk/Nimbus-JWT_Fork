@@ -155,7 +155,7 @@
                 <configuration>
                     <relocations>
                         <relocation>
-                            <pattern>com.google.code.gson</pattern>
+                            <pattern>com.google.gson</pattern>
                             <shadedPattern>com.nimbusds.jose.shaded.gson</shadedPattern>
                         </relocation>
                     </relocations>

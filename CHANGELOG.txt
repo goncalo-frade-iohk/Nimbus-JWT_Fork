@@ -1441,3 +1441,7 @@ version 9.23 (2022-05-28)
     * Updates JWKMatcher to match "x5t#S256" against a key's "x5t#S256"
       parameter as well as the computed thumbprint of a "x5c" parameter.
     * Simplifies JCASupport.isSupported(JWSAlgorithm,Provider)
+
+version 9.24 (2022-08-16)
+    * Replaces JSON Smart 2.4.8 (shaded) with GSon 2.9.1 (also shaded) (iss
+      #448, #483).

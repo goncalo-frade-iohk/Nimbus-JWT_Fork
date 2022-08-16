@@ -165,8 +165,9 @@ public class JWSObjectTest extends TestCase {
 	}
 	
 	
+	// Originally a JSON Smart test, doesn't apply to GSon
 	public void testParseWithExcessiveMixedNestingInHeader() {
-	
+		
 		StringBuilder sb = new StringBuilder("{\"a\":");
 		for (int i = 0; i < 6000; i++) {
 			sb.append("[");
@@ -178,7 +179,7 @@ public class JWSObjectTest extends TestCase {
 			JWSObject.parse(jws);
 			fail();
 		} catch (ParseException e) {
-			assertEquals("Invalid JWS header: Excessive JSON object and / or array nesting", e.getMessage());
+			assertTrue(e.getMessage().startsWith("Invalid JWS header: Invalid JSON: "));
 		}
 	}
 	

@@ -54,9 +54,9 @@
             <version>1.0-1</version>
         </dependency>
         <dependency>
-            <groupId>net.minidev</groupId>
-            <artifactId>json-smart</artifactId>
-            <version>2.4.8</version>
+            <groupId>com.google.code.gson</groupId>
+            <artifactId>gson</artifactId>
+            <version>2.9.1</version>
             <optional>true</optional>
         </dependency>
         <dependency>
@@ -155,23 +155,13 @@
                 <configuration>
                     <relocations>
                         <relocation>
-                            <pattern>org.objectweb.asm</pattern>
-                            <shadedPattern>com.nimbusds.jose.shaded.ow2asm</shadedPattern>
-                        </relocation>
-                        <relocation>
-                            <pattern>net.minidev.asm</pattern>
-                            <shadedPattern>com.nimbusds.jose.shaded.asm</shadedPattern>
-                        </relocation>
-                        <relocation>
-                            <pattern>net.minidev.json</pattern>
-                            <shadedPattern>com.nimbusds.jose.shaded.json</shadedPattern>
+                            <pattern>com.google.code.gson</pattern>
+                            <shadedPattern>com.nimbusds.jose.shaded.gson</shadedPattern>
                         </relocation>
                     </relocations>
                     <artifactSet>
                         <includes>
-                            <include>org.ow2.asm:asm</include>
-                            <include>net.minidev:accessors-smart</include>
-                            <include>net.minidev:json-smart</include>
+                            <include>com.google.code.gson:gson</include>
                         </includes>
                     </artifactSet>
                 </configuration>

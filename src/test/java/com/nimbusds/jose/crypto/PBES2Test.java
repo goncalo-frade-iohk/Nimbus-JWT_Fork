@@ -18,14 +18,17 @@
 package com.nimbusds.jose.crypto;
 
 
+import java.util.HashMap;
+import java.util.Map;
+
 import static org.junit.Assert.assertArrayEquals;
 
 import junit.framework.TestCase;
-import net.minidev.json.JSONObject;
 
 import com.nimbusds.jose.*;
 import com.nimbusds.jose.crypto.bc.BouncyCastleProviderSingleton;
 import com.nimbusds.jose.util.Base64URL;
+import com.nimbusds.jose.util.JSONObjectUtils;
 import com.nimbusds.jose.util.StandardCharset;
 
 
@@ -257,10 +260,10 @@ public class PBES2Test extends TestCase {
 		String jwe = jweObject.serialize();
 		
 		// Modify header
-		JSONObject modifiedHeaderJSONObject = new JSONObject();
+		Map<String, Object> modifiedHeaderJSONObject = new HashMap<>();
 		modifiedHeaderJSONObject.putAll(jweObject.getHeader().toJSONObject());
 		modifiedHeaderJSONObject.put(HeaderParameterNames.PBES2_COUNT, 0);
-		Base64URL modifiedHeader = Base64URL.encode(modifiedHeaderJSONObject.toJSONString());
+		Base64URL modifiedHeader = Base64URL.encode(JSONObjectUtils.toJSONString(modifiedHeaderJSONObject));
 		
 		jwe = jwe.substring(jwe.indexOf('.'));
 		jwe = modifiedHeader + jwe;

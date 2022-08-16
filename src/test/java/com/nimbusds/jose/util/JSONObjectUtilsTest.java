@@ -20,15 +20,14 @@ package com.nimbusds.jose.util;
 
 import java.net.URI;
 import java.text.ParseException;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import junit.framework.TestCase;
 import org.junit.Assert;
 
 import com.nimbusds.jose.HeaderParameterNames;
+import com.nimbusds.jwt.util.DateUtils;
+import com.nimbusds.jwt.util.DateUtilsTest;
 
 
 /**
@@ -792,5 +791,23 @@ public class JSONObjectUtilsTest extends TestCase {
 		
 		Map<String, Object> jsonObject = JSONObjectUtils.newJSONObject();
 		assertNull(JSONObjectUtils.getBase64URL(jsonObject, HeaderParameterNames.X_509_CERT_SHA_1_THUMBPRINT));
+	}
+	
+	
+	public void testToJSONString_unixTimestamp() throws ParseException {
+		
+		Date now = DateUtils.fromSecondsSinceEpoch(new Date().getTime() / 1000);
+		
+		long ts = DateUtils.toSecondsSinceEpoch(now);
+		
+		Map<String, Object> jsonObject = JSONObjectUtils.newJSONObject();
+		jsonObject.put("now", ts);
+		
+		String json = JSONObjectUtils.toJSONString(jsonObject);
+		
+		assertEquals("{\"now\":" + ts + "}", json);
+		
+		jsonObject = JSONObjectUtils.parse(json);
+		assertEquals(ts, JSONObjectUtils.getLong(jsonObject, "now"));
 	}
 }

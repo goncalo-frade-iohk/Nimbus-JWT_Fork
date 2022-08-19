@@ -34,7 +34,7 @@ import com.nimbusds.jwt.util.DateUtilsTest;
  * Tests the JSON object utilities.
  *
  * @author Vladimir Dzhuvinov
- * @version 2022-08-16
+ * @version 2022-08-19
  */
 public class JSONObjectUtilsTest extends TestCase {
 	
@@ -133,6 +133,50 @@ public class JSONObjectUtilsTest extends TestCase {
 		
 		out = JSONObjectUtils.parse(JSONObjectUtils.toJSONString(map));
 		assertEquals(map, out);
+	}
+	
+	
+	public void testParse_intMember() throws ParseException {
+		
+		String json = "{\"auth_time\":1518022800}";
+		
+		Map<String, Object> jsonObject = JSONObjectUtils.parse(json);
+		
+		assertEquals(1518022800L, jsonObject.get("auth_time"));
+	}
+	
+	
+	public void testParse_floatMember() throws ParseException {
+		
+		String json = "{\"auth_time\":1.660730988E9}";
+		
+		Map<String, Object> jsonObject = JSONObjectUtils.parse(json);
+		
+		assertEquals(1.660730988E9, jsonObject.get("auth_time"));
+	}
+	
+	
+	public void testSerialize_intMember() {
+		
+		Map<String, Object> jsonObject = JSONObjectUtils.newJSONObject();
+		jsonObject.put("auth_time", 1518022800);
+		assertEquals("{\"auth_time\":1518022800}", JSONObjectUtils.toJSONString(jsonObject));
+	}
+	
+	
+	public void testSerialize_longMember() {
+		
+		Map<String, Object> jsonObject = JSONObjectUtils.newJSONObject();
+		jsonObject.put("auth_time", 1518022800L);
+		assertEquals("{\"auth_time\":1518022800}", JSONObjectUtils.toJSONString(jsonObject));
+	}
+	
+	
+	public void testSerialize_doubleMember() {
+		
+		Map<String, Object> jsonObject = JSONObjectUtils.newJSONObject();
+		jsonObject.put("auth_time", 1.660730988E9);
+		assertEquals("{\"auth_time\":1.660730988E9}", JSONObjectUtils.toJSONString(jsonObject));
 	}
 	
 	

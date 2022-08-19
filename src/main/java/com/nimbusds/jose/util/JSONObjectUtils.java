@@ -29,6 +29,7 @@ import java.util.Map;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.ToNumberPolicy;
 import com.google.gson.internal.LinkedTreeMap;
 import com.google.gson.reflect.TypeToken;
 
@@ -37,7 +38,7 @@ import com.google.gson.reflect.TypeToken;
  * JSON object helper methods.
  *
  * @author Vladimir Dzhuvinov
- * @version 2022-08-16
+ * @version 2022-08-19
  */
 public class JSONObjectUtils {
 	
@@ -45,7 +46,10 @@ public class JSONObjectUtils {
 	/**
 	 * The GSon instance for serialisation and parsing.
 	 */
-	private static final Gson GSON = new GsonBuilder().serializeNulls().create();
+	private static final Gson GSON = new GsonBuilder()
+		.serializeNulls()
+		.setObjectToNumberStrategy(ToNumberPolicy.LONG_OR_DOUBLE)
+		.create();
 
 
 	/**

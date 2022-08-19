@@ -1448,3 +1448,6 @@ version 9.24 (2022-08-16)
 
 version 9.24.1 (2022-08-16)
     * Fixes GSon relocation pattern in maven-shade-plugin config (iss #484).
+
+version 9.24.2 (2022-08-19)
+    * Fixes GSon integer parsing in JSONObjectUtils (iss #485).

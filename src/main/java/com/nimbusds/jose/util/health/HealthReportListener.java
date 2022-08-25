@@ -21,19 +21,19 @@ import com.nimbusds.jose.proc.SecurityContext;
 
 
 /**
- * Health status reporting.
+ * Health report listener interface.
+ *
+ * @version 2022-08-24
+ * @author Vladimir Dzhuvinov
  */
-public interface HealthStatusReporting <C extends SecurityContext> {
-
+public interface HealthReportListener<C extends SecurityContext> {
+	
 	
 	/**
-	 * Reports the health status.
-	 * 
-	 * @param refresh {@code true} to refresh the health status before
-	 *                returning the report.
-	 * @param context The context, {@code null} if not specified.
+	 * Reports a health status.
 	 *
-	 * @return The health status, {@code null} if unknown.
+	 * @param healthReport The health report.
+	 * @param context      The context, {@code null} if not specified.
 	 */
-	HealthReport reportHealthStatus(final boolean refresh, final C context);
+	void report(final HealthReport healthReport, final C context);
 }

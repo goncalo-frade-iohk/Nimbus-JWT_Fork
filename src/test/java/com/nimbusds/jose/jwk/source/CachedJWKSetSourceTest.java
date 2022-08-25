@@ -21,7 +21,6 @@ import java.lang.Thread.State;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.logging.Level;
 
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.Assert.*;
@@ -36,11 +35,10 @@ import com.nimbusds.jose.jwk.JWK;
 import com.nimbusds.jose.jwk.JWKMatcher;
 import com.nimbusds.jose.jwk.JWKSelector;
 import com.nimbusds.jose.jwk.JWKSet;
-import com.nimbusds.jose.jwk.source.log.CachingJWKSetSourceLogger;
 import com.nimbusds.jose.proc.SecurityContext;
 import com.nimbusds.jose.util.cache.CachedObject;
 
-public class CachedJWKSetSourceTest extends AbstractDelegateSourceTest {
+public class CachedJWKSetSourceTest extends AbstractWrappedJWKSetSourceTest {
 
 	private Runnable lockRunnable = new Runnable() {
 		@Override
@@ -58,28 +56,26 @@ public class CachedJWKSetSourceTest extends AbstractDelegateSourceTest {
 		}
 	};
 	
-	private CachingJWKSetSource<SecurityContext, CachingJWKSetSource.Listener<SecurityContext>> source;
-
-	private CachingJWKSetSource.Listener<SecurityContext> listener = new CachingJWKSetSourceLogger<>(Level.INFO);
+	private CachingJWKSetSource<SecurityContext> source;
 
 	@Before
 	public void setUp() throws Exception {
 		super.setUp();
-		source = new CachingJWKSetSource<>(delegate, 10 * 3600 * 1000, 2 * 1000, listener);
+		source = new CachingJWKSetSource<>(wrappedJWKSetSource, 10 * 3600 * 1000, 2 * 1000);
 	}
 
 	@Test
 	public void testShouldUseDelegateWhenNotCached() throws Exception {
-		when(delegate.getJWKSet(eq(false), anyLong(), anySecurityContext())).thenReturn(jwkSet);
+		when(wrappedJWKSetSource.getJWKSet(eq(false), anyLong(), anySecurityContext())).thenReturn(jwkSet);
 		assertEquals(source.getJWKSet(false, System.currentTimeMillis(), context), jwkSet);
 	}
 
 	@Test
 	public void testShouldUseCachedValue() throws Exception {
-		when(delegate.getJWKSet(eq(false), anyLong(), anySecurityContext())).thenReturn(jwkSet).thenThrow(new RuntimeException("TEST!", null));
+		when(wrappedJWKSetSource.getJWKSet(eq(false), anyLong(), anySecurityContext())).thenReturn(jwkSet).thenThrow(new RuntimeException("TEST!", null));
 		source.getJWKSet(false, System.currentTimeMillis(), context);
 		assertEquals(source.getJWKSet(false, System.currentTimeMillis(), context), jwkSet);
-		verify(delegate, only()).getJWKSet(eq(false), anyLong(), anySecurityContext());
+		verify(wrappedJWKSetSource, only()).getJWKSet(eq(false), anyLong(), anySecurityContext());
 	}
 
 	@Test
@@ -87,22 +83,22 @@ public class CachedJWKSetSourceTest extends AbstractDelegateSourceTest {
 		JWKSet first = new JWKSet(jwk);
 		JWKSet second = new JWKSet(Arrays.asList(jwk, jwk));
 
-		when(delegate.getJWKSet(eq(false), anyLong(), anySecurityContext())).thenReturn(first).thenReturn(second);
+		when(wrappedJWKSetSource.getJWKSet(eq(false), anyLong(), anySecurityContext())).thenReturn(first).thenReturn(second);
 
 		// first
 		source.getJWKSet(false, System.currentTimeMillis(), context);
 		assertEquals(source.getJWKSet(false, System.currentTimeMillis(), context), first);
-		verify(delegate, only()).getJWKSet(eq(false), anyLong(), anySecurityContext());
+		verify(wrappedJWKSetSource, only()).getJWKSet(eq(false), anyLong(), anySecurityContext());
 
 		// second
 		source.getJWKSet(false, CachedObject.computeExpirationTime(System.currentTimeMillis() + 1, source.getTimeToLive()), context);
 		assertEquals(source.getJWKSet(false, System.currentTimeMillis(), context), second);
-		verify(delegate, times(2)).getJWKSet(eq(false), anyLong(), anySecurityContext());
+		verify(wrappedJWKSetSource, times(2)).getJWKSet(eq(false), anyLong(), anySecurityContext());
 	}
 
 	@Test
 	public void testShouldNotReturnExpiredValueWhenExpiredCache() throws Exception {
-		when(delegate.getJWKSet(eq(false), anyLong(), anySecurityContext())).thenReturn(jwkSet).thenThrow(new JWKSetUnavailableException("TEST!", null));
+		when(wrappedJWKSetSource.getJWKSet(eq(false), anyLong(), anySecurityContext())).thenReturn(jwkSet).thenThrow(new JWKSetUnavailableException("TEST!", null));
 		source.getJWKSet(false, System.currentTimeMillis(), context);
 		assertEquals(source.getJWKSet(false, System.currentTimeMillis(), context), jwkSet);
 
@@ -116,14 +112,14 @@ public class CachedJWKSetSourceTest extends AbstractDelegateSourceTest {
 
 	@Test
 	public void testShouldUseCachedValueForKnownKey() throws Exception {
-		when(delegate.getJWKSet(eq(false), anyLong(), anySecurityContext())).thenReturn(jwkSet).thenThrow(new JWKSetUnavailableException("TEST!", null));
+		when(wrappedJWKSetSource.getJWKSet(eq(false), anyLong(), anySecurityContext())).thenReturn(jwkSet).thenThrow(new JWKSetUnavailableException("TEST!", null));
 		JWKSetBasedJWKSource<SecurityContext> wrapper = new JWKSetBasedJWKSource<>(source);
 		try {
 			JWKSelector selector = new JWKSelector(new JWKMatcher.Builder().keyID(KID).build());
 	
 			List<JWK> list = wrapper.get(selector, context);
 			assertEquals(Arrays.asList(jwk), list);
-			verify(delegate, only()).getJWKSet(eq(false), anyLong(), anySecurityContext());
+			verify(wrappedJWKSetSource, only()).getJWKSet(eq(false), anyLong(), anySecurityContext());
 		} finally {
 			wrapper.close();
 		}
@@ -131,7 +127,7 @@ public class CachedJWKSetSourceTest extends AbstractDelegateSourceTest {
 
 	@Test
 	public void testShouldGetBaseProvider() {
-		assertThat(source.getSource(), equalTo(delegate));
+		assertThat(source.getSource(), equalTo(wrappedJWKSetSource));
 	}
 
 	@Test
@@ -144,19 +140,19 @@ public class CachedJWKSetSourceTest extends AbstractDelegateSourceTest {
 		JWKSet first = new JWKSet(a);
 		JWKSet second = new JWKSet(b);
 
-		when(delegate.getJWKSet(eq(false), anyLong(), anySecurityContext())).thenReturn(first).thenReturn(second);
+		when(wrappedJWKSetSource.getJWKSet(eq(false), anyLong(), anySecurityContext())).thenReturn(first).thenReturn(second);
 
 		JWKSetBasedJWKSource<SecurityContext> wrapper = new JWKSetBasedJWKSource<>(source);
 		try {
 			// first
 			assertEquals(wrapper.get(aSelector, context), first.getKeys());
-			verify(delegate, only()).getJWKSet(eq(false), anyLong(), anySecurityContext());
+			verify(wrappedJWKSetSource, only()).getJWKSet(eq(false), anyLong(), anySecurityContext());
 	
 			Thread.sleep(1); // cache is not refreshed if request timestamp is >= timestamp parameter
 			
 			// second
 			assertEquals(wrapper.get(bSelector, context), second.getKeys());
-			verify(delegate, times(2)).getJWKSet(eq(false), anyLong(), anySecurityContext());
+			verify(wrappedJWKSetSource, times(2)).getJWKSet(eq(false), anyLong(), anySecurityContext());
 		} finally {
 			wrapper.close();
 		}
@@ -172,19 +168,19 @@ public class CachedJWKSetSourceTest extends AbstractDelegateSourceTest {
 		JWKSet first = new JWKSet(a);
 		JWKSet second = new JWKSet(b);
 
-		when(delegate.getJWKSet(eq(false), anyLong(), anySecurityContext())).thenReturn(first).thenReturn(second);
+		when(wrappedJWKSetSource.getJWKSet(eq(false), anyLong(), anySecurityContext())).thenReturn(first).thenReturn(second);
 
 		JWKSetBasedJWKSource<SecurityContext> wrapper = new JWKSetBasedJWKSource<>(source);
 		try {
 			// first
 			assertEquals(wrapper.get(aSelector, context), first.getKeys());
-			verify(delegate, only()).getJWKSet(eq(false), anyLong(), anySecurityContext());
+			verify(wrappedJWKSetSource, only()).getJWKSet(eq(false), anyLong(), anySecurityContext());
 	
 			Thread.sleep(1);
 			
 			// second
 			assertEquals(wrapper.get(cSelector, context), Collections.emptyList());
-			verify(delegate, times(2)).getJWKSet(eq(false), anyLong(), anySecurityContext());
+			verify(wrappedJWKSetSource, times(2)).getJWKSet(eq(false), anyLong(), anySecurityContext());
 		} finally {
 			wrapper.close();
 		}
@@ -224,7 +220,7 @@ public class CachedJWKSetSourceTest extends AbstractDelegateSourceTest {
 			}
 		};
 
-		when(delegate.getJWKSet(eq(false), anyLong(), anySecurityContext())).thenReturn(jwkSet);
+		when(wrappedJWKSetSource.getJWKSet(eq(false), anyLong(), anySecurityContext())).thenReturn(jwkSet);
 
 		ThreadHelper helper = new ThreadHelper().addRun(lockRunnable).addPause().addRun(racer).addRun(unlockRunnable);
 		try {
@@ -234,7 +230,7 @@ public class CachedJWKSetSourceTest extends AbstractDelegateSourceTest {
 
 			source.getJWKSet(false, System.currentTimeMillis(), context);
 
-			verify(delegate, only()).getJWKSet(eq(false), anyLong(), anySecurityContext());
+			verify(wrappedJWKSetSource, only()).getJWKSet(eq(false), anyLong(), anySecurityContext());
 		} finally {
 			helper.close();
 		}

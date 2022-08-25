@@ -28,8 +28,6 @@ public class HealthStatusTest extends TestCase {
 		
 		assertEquals("HEALTHY",       HealthStatus.values()[0].name());
 		assertEquals("NOT_HEALTHY",   HealthStatus.values()[1].name());
-		assertEquals("UNKNOWN",       HealthStatus.values()[2].name());
-		assertEquals("NOT_SUPPORTED", HealthStatus.values()[3].name());
-		assertEquals(4, HealthStatus.values().length);
+		assertEquals(2, HealthStatus.values().length);
 	}
 }

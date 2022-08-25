@@ -22,7 +22,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.logging.Level;
 
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.Assert.*;
@@ -38,11 +37,10 @@ import com.nimbusds.jose.jwk.JWK;
 import com.nimbusds.jose.jwk.JWKMatcher;
 import com.nimbusds.jose.jwk.JWKSelector;
 import com.nimbusds.jose.jwk.JWKSet;
-import com.nimbusds.jose.jwk.source.log.RefreshAheadCachingJWKSetSourceLogger;
 import com.nimbusds.jose.proc.SecurityContext;
 import com.nimbusds.jose.util.cache.CachedObject;
 
-public class RefreshAheadCachingJWKSetSourceTest extends AbstractDelegateSourceTest {
+public class RefreshAheadCachingJWKSetSourceTest extends AbstractWrappedJWKSetSourceTest {
 
 	private final Runnable lockRunnable = new Runnable() {
 		@Override
@@ -64,7 +62,6 @@ public class RefreshAheadCachingJWKSetSourceTest extends AbstractDelegateSourceT
 	protected static final JWKSelector KID_SELECTOR = new JWKSelector(new JWKMatcher.Builder().keyID(KID).build());
 
 	private RefreshAheadCachingJWKSetSource<SecurityContext> source;
-	private RefreshAheadCachingJWKSetSource.Listener<SecurityContext> listener = new RefreshAheadCachingJWKSetSourceLogger<SecurityContext>(Level.INFO);
 	
 	private JWKSetBasedJWKSource<SecurityContext> wrapper;
 
@@ -72,7 +69,7 @@ public class RefreshAheadCachingJWKSetSourceTest extends AbstractDelegateSourceT
 	public void setUp() throws Exception {
 		super.setUp();
 
-		source = new RefreshAheadCachingJWKSetSource<>(delegate, 3600 * 1000 * 10, 15 * 1000, 10 * 1000, false, listener);
+		source = new RefreshAheadCachingJWKSetSource<>(wrappedJWKSetSource, 3600 * 1000 * 10, 15 * 1000, 10 * 1000, false);
 
 		wrapper = new JWKSetBasedJWKSource<>(source);
 	}
@@ -88,7 +85,7 @@ public class RefreshAheadCachingJWKSetSourceTest extends AbstractDelegateSourceT
 		assertTrue(cacheRefreshTimeout + refreshAheadTime > timeToLive);
 		
 		try {
-			new RefreshAheadCachingJWKSetSource<>(delegate, timeToLive, cacheRefreshTimeout, refreshAheadTime, false, listener);
+			new RefreshAheadCachingJWKSetSource<>(wrappedJWKSetSource, timeToLive, cacheRefreshTimeout, refreshAheadTime, false);
 			fail();
 		} catch (IllegalArgumentException e) {
 			assertEquals("The sum of the refresh-ahead time (50001ms) and the cache refresh timeout (10000ms) must not exceed the time-to-lived time (60000ms)", e.getMessage());
@@ -97,16 +94,16 @@ public class RefreshAheadCachingJWKSetSourceTest extends AbstractDelegateSourceT
 
 	@Test
 	public void testShouldUseFallbackWhenNotCached() throws Exception {
-		when(delegate.getJWKSet(eq(false), anyLong(), anySecurityContext())).thenReturn(jwkSet);
+		when(wrappedJWKSetSource.getJWKSet(eq(false), anyLong(), anySecurityContext())).thenReturn(jwkSet);
 		assertEquals(source.getJWKSet(false, System.currentTimeMillis(), context), jwkSet);
 	}
 
 	@Test
 	public void testShouldUseCachedValue() throws Exception {
-		when(delegate.getJWKSet(eq(false), anyLong(), anySecurityContext())).thenReturn(jwkSet).thenThrow(new JWKSetUnavailableException("TEST!", null));
+		when(wrappedJWKSetSource.getJWKSet(eq(false), anyLong(), anySecurityContext())).thenReturn(jwkSet).thenThrow(new JWKSetUnavailableException("TEST!", null));
 		source.getJWKSet(false, System.currentTimeMillis(), context);
 		assertEquals(source.getJWKSet(false, System.currentTimeMillis(), context), jwkSet);
-		verify(delegate, only()).getJWKSet(eq(false), anyLong(), anySecurityContext());
+		verify(wrappedJWKSetSource, only()).getJWKSet(eq(false), anyLong(), anySecurityContext());
 	}
 
 	@Test
@@ -114,20 +111,20 @@ public class RefreshAheadCachingJWKSetSourceTest extends AbstractDelegateSourceT
 		JWKSet first = new JWKSet(jwk);
 		JWKSet second = new JWKSet(Arrays.asList(jwk, jwk));
 
-		when(delegate.getJWKSet(eq(false), anyLong(), anySecurityContext())).thenReturn(first).thenReturn(second);
+		when(wrappedJWKSetSource.getJWKSet(eq(false), anyLong(), anySecurityContext())).thenReturn(first).thenReturn(second);
 
 		// first
 		assertEquals(source.getJWKSet(false, System.currentTimeMillis(), context), first);
-		verify(delegate, only()).getJWKSet(eq(false), anyLong(), anySecurityContext());
+		verify(wrappedJWKSetSource, only()).getJWKSet(eq(false), anyLong(), anySecurityContext());
 
 		// second
 		assertEquals(source.getJWKSet(false, CachedObject.computeExpirationTime(System.currentTimeMillis() + 1, source.getTimeToLive()), context), second);
-		verify(delegate, times(2)).getJWKSet(eq(false), anyLong(), anySecurityContext());
+		verify(wrappedJWKSetSource, times(2)).getJWKSet(eq(false), anyLong(), anySecurityContext());
 	}
 
 	@Test
 	public void testShouldNotReturnExpiredValueWhenExpiredCacheAndRefreshFails() throws Exception {
-		when(delegate.getJWKSet(eq(false), anyLong(), anySecurityContext())).thenReturn(jwkSet).thenThrow(new KeySourceException("TEST!", null));
+		when(wrappedJWKSetSource.getJWKSet(eq(false), anyLong(), anySecurityContext())).thenReturn(jwkSet).thenThrow(new KeySourceException("TEST!", null));
 		assertEquals(source.getJWKSet(false, System.currentTimeMillis(), context), jwkSet);
 
 		try {
@@ -140,14 +137,14 @@ public class RefreshAheadCachingJWKSetSourceTest extends AbstractDelegateSourceT
 
 	@Test
 	public void testShouldGetBaseProvider() {
-		assertThat(source.getSource(), equalTo(delegate));
+		assertThat(source.getSource(), equalTo(wrappedJWKSetSource));
 	}
 
 	@Test
 	public void testShouldUseCachedValueForKnownKey() throws Exception {
-		when(delegate.getJWKSet(eq(false), anyLong(), anySecurityContext())).thenReturn(jwkSet).thenThrow(new KeySourceException("TEST!", null));
+		when(wrappedJWKSetSource.getJWKSet(eq(false), anyLong(), anySecurityContext())).thenReturn(jwkSet).thenThrow(new KeySourceException("TEST!", null));
 		assertEquals(wrapper.get(KID_SELECTOR, context), Arrays.asList(jwk));
-		verify(delegate, only()).getJWKSet(eq(false), anyLong(), anySecurityContext());
+		verify(wrappedJWKSetSource, only()).getJWKSet(eq(false), anyLong(), anySecurityContext());
 	}
 
 	@Test
@@ -160,17 +157,17 @@ public class RefreshAheadCachingJWKSetSourceTest extends AbstractDelegateSourceT
 		JWKSet first = new JWKSet(a);
 		JWKSet second = new JWKSet(b);
 
-		when(delegate.getJWKSet(eq(false), anyLong(), anySecurityContext())).thenReturn(first).thenReturn(second);
+		when(wrappedJWKSetSource.getJWKSet(eq(false), anyLong(), anySecurityContext())).thenReturn(first).thenReturn(second);
 
 		// first
 		assertEquals(wrapper.get(aSelector, context), first.getKeys());
-		verify(delegate, only()).getJWKSet(eq(false), anyLong(), anySecurityContext());
+		verify(wrappedJWKSetSource, only()).getJWKSet(eq(false), anyLong(), anySecurityContext());
 
 		Thread.sleep(1);
 		
 		// second
 		assertEquals(wrapper.get(bSelector, context), second.getKeys());
-		verify(delegate, times(2)).getJWKSet(eq(false), anyLong(), anySecurityContext());
+		verify(wrappedJWKSetSource, times(2)).getJWKSet(eq(false), anyLong(), anySecurityContext());
 	}
 
 	@Test
@@ -183,11 +180,11 @@ public class RefreshAheadCachingJWKSetSourceTest extends AbstractDelegateSourceT
 		JWKSet first = new JWKSet(a);
 		JWKSet second = new JWKSet(b);
 
-		when(delegate.getJWKSet(eq(false), anyLong(), anySecurityContext())).thenReturn(first).thenReturn(second);
+		when(wrappedJWKSetSource.getJWKSet(eq(false), anyLong(), anySecurityContext())).thenReturn(first).thenReturn(second);
 
 		// first
 		assertEquals(wrapper.get(aSelector, context), Arrays.asList(a));
-		verify(delegate, only()).getJWKSet(eq(false), anyLong(), anySecurityContext());
+		verify(wrappedJWKSetSource, only()).getJWKSet(eq(false), anyLong(), anySecurityContext());
 
 		// second
 		List<JWK> list = wrapper.get(cSelector, context);
@@ -204,28 +201,28 @@ public class RefreshAheadCachingJWKSetSourceTest extends AbstractDelegateSourceT
 		JWKSet first = new JWKSet(a);
 		JWKSet second = new JWKSet(b);
 
-		when(delegate.getJWKSet(eq(false), anyLong(), anySecurityContext())).thenReturn(first).thenReturn(second);
+		when(wrappedJWKSetSource.getJWKSet(eq(false), anyLong(), anySecurityContext())).thenReturn(first).thenReturn(second);
 
 		// first jwks
 		List<JWK> longBeforeExpiryKeys = wrapper.get(aSelector, context);
 		assertFalse(longBeforeExpiryKeys.isEmpty());
 		assertEquals(longBeforeExpiryKeys, first.getKeys());
-		verify(delegate, only()).getJWKSet(eq(false), anyLong(), anySecurityContext());
+		verify(wrappedJWKSetSource, only()).getJWKSet(eq(false), anyLong(), anySecurityContext());
 
 		long justBeforeExpiry = CachedObject.computeExpirationTime(System.currentTimeMillis(), source.getTimeToLive()) - TimeUnit.SECONDS.toMillis(5);
-		verify(delegate, only()).getJWKSet(eq(false), anyLong(), anySecurityContext());
+		verify(wrappedJWKSetSource, only()).getJWKSet(eq(false), anyLong(), anySecurityContext());
 
 		JWKSet justBeforeExpiryKeys = source.getJWKSet(false, justBeforeExpiry, context);
 		assertFalse(justBeforeExpiryKeys.isEmpty());
 		assertEquals(justBeforeExpiryKeys.getKeys(), first.getKeys()); // triggers a preemptive refresh attempt
 
 		source.getExecutorService().awaitTermination(1, TimeUnit.SECONDS);
-		verify(delegate, times(2)).getJWKSet(eq(false), anyLong(), anySecurityContext());
+		verify(wrappedJWKSetSource, times(2)).getJWKSet(eq(false), anyLong(), anySecurityContext());
 
 		// second jwks
 		assertEquals(wrapper.get(bSelector, context), second.getKeys()); // should already be in cache
 		source.getExecutorService().awaitTermination(1, TimeUnit.SECONDS); // just to make sure
-		verify(delegate, times(2)).getJWKSet(eq(false), anyLong(), anySecurityContext());
+		verify(wrappedJWKSetSource, times(2)).getJWKSet(eq(false), anyLong(), anySecurityContext());
 	}
 
 	@Test
@@ -238,11 +235,11 @@ public class RefreshAheadCachingJWKSetSourceTest extends AbstractDelegateSourceT
 		JWKSet first = new JWKSet(a);
 		JWKSet second = new JWKSet(b);
 
-		when(delegate.getJWKSet(eq(false), anyLong(), anySecurityContext())).thenReturn(first).thenReturn(second);
+		when(wrappedJWKSetSource.getJWKSet(eq(false), anyLong(), anySecurityContext())).thenReturn(first).thenReturn(second);
 
 		// first jwks
 		assertEquals(wrapper.get(aSelector, context), first.getKeys());
-		verify(delegate, only()).getJWKSet(eq(false), anyLong(), anySecurityContext());
+		verify(wrappedJWKSetSource, only()).getJWKSet(eq(false), anyLong(), anySecurityContext());
 
 		CachedObject<JWKSet> cache = source.getCachedJWKSetIfValid(System.currentTimeMillis());
 
@@ -254,12 +251,12 @@ public class RefreshAheadCachingJWKSetSourceTest extends AbstractDelegateSourceT
 
 		source.refreshAheadOfExpiration(cache, false, justBeforeExpiry, context); // should not trigger a preemptive refresh attempt
 
-		verify(delegate, times(2)).getJWKSet(eq(false), anyLong(), anySecurityContext());
+		verify(wrappedJWKSetSource, times(2)).getJWKSet(eq(false), anyLong(), anySecurityContext());
 
 		// second jwks
 		assertEquals(wrapper.get(bSelector, null), second.getKeys()); // should already be in cache
 		source.getExecutorService().awaitTermination(1, TimeUnit.SECONDS); // just to make sure
-		verify(delegate, times(2)).getJWKSet(eq(false), anyLong(), anySecurityContext());
+		verify(wrappedJWKSetSource, times(2)).getJWKSet(eq(false), anyLong(), anySecurityContext());
 	}
 
 	@Test
@@ -272,11 +269,11 @@ public class RefreshAheadCachingJWKSetSourceTest extends AbstractDelegateSourceT
 		JWKSet first = new JWKSet(a);
 		JWKSet second = new JWKSet(b);
 
-		when(delegate.getJWKSet(eq(false), anyLong(), anySecurityContext())).thenReturn(first).thenThrow(new JWKSetUnavailableException("TEST!")).thenReturn(second);
+		when(wrappedJWKSetSource.getJWKSet(eq(false), anyLong(), anySecurityContext())).thenReturn(first).thenThrow(new JWKSetUnavailableException("TEST!")).thenReturn(second);
 
 		// first jwks
 		assertEquals(wrapper.get(aSelector, context), first.getKeys());
-		verify(delegate, only()).getJWKSet(eq(false), anyLong(), anySecurityContext());
+		verify(wrappedJWKSetSource, only()).getJWKSet(eq(false), anyLong(), anySecurityContext());
 
 		long justBeforeExpiry = CachedObject.computeExpirationTime(System.currentTimeMillis(), source.getTimeToLive()) - TimeUnit.SECONDS.toMillis(5);
 
@@ -288,17 +285,17 @@ public class RefreshAheadCachingJWKSetSourceTest extends AbstractDelegateSourceT
 
 		source.getExecutorService().awaitTermination(1, TimeUnit.SECONDS);
 
-		verify(delegate, times(3)).getJWKSet(eq(false), anyLong(), anySecurityContext());
+		verify(wrappedJWKSetSource, times(3)).getJWKSet(eq(false), anyLong(), anySecurityContext());
 
 		// second jwks
 		assertEquals(wrapper.get(bSelector, context), second.getKeys()); // should already be in cache
 		source.getExecutorService().awaitTermination(1, TimeUnit.SECONDS); // just to make sure
-		verify(delegate, times(3)).getJWKSet(eq(false), anyLong(), anySecurityContext());
+		verify(wrappedJWKSetSource, times(3)).getJWKSet(eq(false), anyLong(), anySecurityContext());
 	}
 
 	@Test
 	public void testShouldAcceptIfAnotherThreadPreemptivelyUpdatesCache() throws Exception {
-		when(delegate.getJWKSet(eq(false), anyLong(), anySecurityContext())).thenReturn(jwkSet);
+		when(wrappedJWKSetSource.getJWKSet(eq(false), anyLong(), anySecurityContext())).thenReturn(jwkSet);
 
 		source.getJWKSet(false, System.currentTimeMillis(), context);
 
@@ -310,7 +307,7 @@ public class RefreshAheadCachingJWKSetSourceTest extends AbstractDelegateSourceT
 
 			source.getJWKSet(false, justBeforeExpiry, context); // wants to update, but can't get lock
 
-			verify(delegate, only()).getJWKSet(eq(false), anyLong(), anySecurityContext());
+			verify(wrappedJWKSetSource, only()).getJWKSet(eq(false), anyLong(), anySecurityContext());
 		} finally {
 			helper.close();
 		}
@@ -322,7 +319,7 @@ public class RefreshAheadCachingJWKSetSourceTest extends AbstractDelegateSourceT
 		long refreshTimeout = 150;
 		long preemptiveRefresh = 300;
 
-		RefreshAheadCachingJWKSetSource<SecurityContext> provider = new RefreshAheadCachingJWKSetSource<>(delegate, timeToLive, refreshTimeout, preemptiveRefresh, true, listener);
+		RefreshAheadCachingJWKSetSource<SecurityContext> provider = new RefreshAheadCachingJWKSetSource<>(wrappedJWKSetSource, timeToLive, refreshTimeout, preemptiveRefresh, true);
 		JWKSetBasedJWKSource<SecurityContext> wrapper = new JWKSetBasedJWKSource<>(provider);
 
 		try {
@@ -334,13 +331,13 @@ public class RefreshAheadCachingJWKSetSourceTest extends AbstractDelegateSourceT
 			JWKSet first = new JWKSet(a);
 			JWKSet second = new JWKSet(b);
 	
-			when(delegate.getJWKSet(eq(false), anyLong(), anySecurityContext())).thenReturn(first).thenReturn(second);
+			when(wrappedJWKSetSource.getJWKSet(eq(false), anyLong(), anySecurityContext())).thenReturn(first).thenReturn(second);
 	
 			long time = System.currentTimeMillis();
 			
 			// first jwks
 			assertEquals(wrapper.get(aSelector, context), first.getKeys());
-			verify(delegate, only()).getJWKSet(eq(false), anyLong(), anySecurityContext());
+			verify(wrappedJWKSetSource, only()).getJWKSet(eq(false), anyLong(), anySecurityContext());
 	
 			ScheduledFuture<?> eagerJwkListCacheItem = provider.getScheduledRefreshFuture();
 			assertNotNull(eagerJwkListCacheItem);
@@ -356,11 +353,11 @@ public class RefreshAheadCachingJWKSetSourceTest extends AbstractDelegateSourceT
 			Thread.sleep(left + Math.min(25, 4 * skew));
 			
 			provider.getExecutorService().awaitTermination(Math.min(25, 4 * skew), TimeUnit.MILLISECONDS);
-			verify(delegate, times(2)).getJWKSet(eq(false), anyLong(), anySecurityContext());
+			verify(wrappedJWKSetSource, times(2)).getJWKSet(eq(false), anyLong(), anySecurityContext());
 			
 			// no new update necessary
 			assertEquals(wrapper.get(bSelector, context), second.getKeys());
-			verify(delegate, times(2)).getJWKSet(eq(false), anyLong(), anySecurityContext());
+			verify(wrappedJWKSetSource, times(2)).getJWKSet(eq(false), anyLong(), anySecurityContext());
 		} finally {
 			wrapper.close();
 		}

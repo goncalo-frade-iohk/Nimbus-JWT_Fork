@@ -29,14 +29,14 @@ import com.nimbusds.jose.jwk.JWK;
 import com.nimbusds.jose.jwk.JWKSelector;
 import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.proc.SecurityContext;
-import com.nimbusds.jose.util.health.HealthReport;
 
 
 /**
  * JSON Web Key (JWK) set based JWK source.
  *
  * @author Thomas Rørvik Skjølberg
- * @version 2022-04-14
+ * @author Vladimir Dzhuvinov
+ * @version 2022-08-24
  */
 @ThreadSafe
 public class JWKSetBasedJWKSource<C extends SecurityContext> implements JWKSetSource<C>, JWKSource<C> {
@@ -55,20 +55,21 @@ public class JWKSetBasedJWKSource<C extends SecurityContext> implements JWKSetSo
 		this.source = source;
 	}
 
+	
 	@Override
 	public List<JWK> get(final JWKSelector jwkSelector, final C context) throws KeySourceException {
 		
 		long currentTime = System.currentTimeMillis();
 		
-		// Get the list of JWKs and match against the selector
-		// if no matches, attempt to refresh the list of JWKs
-		// and rerun matching. 
+		// Get the list of JWKs and match against the selector.
+		// If no matches, attempt to refresh the list of JWKs
+		// and repeat the matching.
 		
-		// So for the no-match scenario, what we really have is a
+		// So for the no-match scenario, what we have is a
 		// read-write-read type transaction. In order to identify
 		// whether another thread has already performed the write operation,
 		// the timestamp for the original read operation is passed along
-		// and used internally to check whether the cache is up to date; preventing
+		// and used internally to check whether the cache is up-to-date; preventing
 		// unnecessary external calls
 		
 		List<JWK> select = jwkSelector.select(source.getJWKSet(false, currentTime, context));
@@ -98,11 +99,5 @@ public class JWKSetBasedJWKSource<C extends SecurityContext> implements JWKSetSo
 	@Override
 	public void close() throws IOException {
 		source.close();
-	}
-	
-	
-	@Override
-	public HealthReport reportHealthStatus(final boolean refresh, C context) {
-		return source.reportHealthStatus(refresh, context);
 	}
 }

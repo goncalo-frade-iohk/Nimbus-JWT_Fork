@@ -34,16 +34,11 @@ import com.nimbusds.jose.util.cache.CachedObject;
  * a {@linkplain JWKSetUnavailableException}.
  *
  * @author Thomas Rørvik Skjølberg
- * @version 2022-04-09
+ * @author Vladimir Dzhuvinov
+ * @version 2022-08-24
  */
 @ThreadSafe
 public class OutageTolerantJWKSetSource<C extends SecurityContext> extends AbstractCachingJWKSetSource<C> {
-	
-	public interface Listener<C extends SecurityContext> extends JWKSetSourceListener<C> {
-		void onOutage(Exception e, long totalTimeToLive, long remainingTimeToLive, C context);
-	}
-	
-	private final Listener<C> listener;
 	
 	
 	/**
@@ -53,11 +48,9 @@ public class OutageTolerantJWKSetSource<C extends SecurityContext> extends Abstr
 	 *                   {@code null}.
 	 * @param timeToLive The time to live of the cached JWK set to cover
 	 *                   outages, in milliseconds.
-	 * @param listener   The listener, {@code null} if not specified.
 	 */
-	public OutageTolerantJWKSetSource(final JWKSetSource<C> source, final long timeToLive, final Listener<C> listener) {
+	public OutageTolerantJWKSetSource(final JWKSetSource<C> source, final long timeToLive) {
 		super(source, timeToLive);
-		this.listener = listener;
 	}
 
 	
@@ -74,10 +67,6 @@ public class OutageTolerantJWKSetSource<C extends SecurityContext> extends Abstr
 				// return the previously cached JWT set
 				CachedObject<JWKSet> cache = getCachedJWKSet();
 				if (cache != null && cache.isValid(currentTime)) {
-					long left = cache.getExpirationTime() - currentTime; // in millis
-					if (listener != null) {
-						listener.onOutage(e1, getTimeToLive(), left, context);
-					}
 					return cache.get();
 				}
 			}

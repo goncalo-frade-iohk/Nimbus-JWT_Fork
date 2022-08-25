@@ -29,25 +29,20 @@ import com.nimbusds.jose.jwk.JWK;
 import com.nimbusds.jose.jwk.JWKSelector;
 import com.nimbusds.jose.proc.SecurityContext;
 import com.nimbusds.jose.util.IOUtils;
-import com.nimbusds.jose.util.health.HealthReport;
-import com.nimbusds.jose.util.health.HealthStatus;
-import com.nimbusds.jose.util.health.HealthStatusReporting;
 
 
 /**
  * JWK source with optional failover.
  *
  * @author Thomas Rørvik Skjølberg
- * @version 2022-04-09
+ * @author Vladimir Dzhuvinov
+ * @version 2022-08-24
  */
 @ThreadSafe
-public class JWKSourceWithFailover<C extends SecurityContext> implements JWKSource<C>, HealthStatusReporting<C>, Closeable {
+public class JWKSourceWithFailover<C extends SecurityContext> implements JWKSource<C>, Closeable {
 	
 	private final JWKSource<C> jwkSource;
 	private final JWKSource<C> failoverJWKSource;
-
-	private final HealthStatusReporting<C> jwkSourceHealthSource;
-	private final HealthStatusReporting<C> failoverJWKSourceHealthSource;
 
 	
 	/**
@@ -63,17 +58,6 @@ public class JWKSourceWithFailover<C extends SecurityContext> implements JWKSour
 		Objects.requireNonNull(jwkSource, "The primary JWK source must not be null");
 		this.jwkSource = jwkSource;
 		this.failoverJWKSource = failoverJWKSource;
-
-		this.jwkSourceHealthSource = toHealthStatusReporting(jwkSource);
-		this.failoverJWKSourceHealthSource = toHealthStatusReporting(failoverJWKSource);
-	}
-
-	@SuppressWarnings("unchecked")
-	private HealthStatusReporting<C> toHealthStatusReporting(final JWKSource<C> source) {
-		if (source instanceof HealthStatusReporting) {
-			return (HealthStatusReporting<C>) source;
-		}
-		return null;
 	}
 
 	
@@ -113,23 +97,5 @@ public class JWKSourceWithFailover<C extends SecurityContext> implements JWKSour
 		if (failoverJWKSource instanceof Closeable) {
 			IOUtils.closeSilently((Closeable)failoverJWKSource);
 		}
-	}
-
-	
-	@Override
-	public HealthReport reportHealthStatus(final boolean refresh, final C context) {
-		HealthReport health = null;
-		if (jwkSourceHealthSource != null) {
-			health = jwkSourceHealthSource.reportHealthStatus(refresh, context);
-		}
-		if (health == null || HealthStatus.NOT_HEALTHY.equals(health.getHealthStatus())) {
-			if (failoverJWKSourceHealthSource != null) {
-				health = failoverJWKSourceHealthSource.reportHealthStatus(refresh, context);
-			}
-		}
-		if (health == null) {
-			health = new HealthReport(HealthStatus.UNKNOWN);
-		}
-		return health;
 	}
 }

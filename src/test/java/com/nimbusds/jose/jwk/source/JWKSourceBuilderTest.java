@@ -30,199 +30,317 @@ import static org.mockito.Mockito.mock;
 import org.junit.Test;
 
 import com.nimbusds.jose.proc.SecurityContext;
+import com.nimbusds.jose.util.health.HealthReport;
+import com.nimbusds.jose.util.health.HealthReportListener;
 
-public class JWKSourceBuilderTest extends AbstractDelegateSourceTest {
 
+public class JWKSourceBuilderTest extends AbstractWrappedJWKSetSourceTest {
+	
+	
 	@Test
-	public void testShouldCreateCachedProvider() {
-		JWKSource<SecurityContext> provider = builder().rateLimited(false).cache(true).healthReporting(false).build();
-		assertNotNull(provider);
-
-		List<JWKSetSource<SecurityContext>> jwksProviders = jwksProviders(provider);
-		assertEquals(2, jwksProviders.size());
-
-		assertTrue(jwksProviders.get(0) instanceof CachingJWKSetSource);
-		assertTrue(jwksProviders.get(1) instanceof JWKSetSource);
+	public void constants() {
+		
+		assertEquals(500L, JWKSourceBuilder.DEFAULT_HTTP_CONNECT_TIMEOUT);
+		assertEquals(500L, JWKSourceBuilder.DEFAULT_HTTP_READ_TIMEOUT);
+		assertEquals(50 * 1024L, JWKSourceBuilder.DEFAULT_HTTP_SIZE_LIMIT);
+		assertEquals(5*60*1000L, JWKSourceBuilder.DEFAULT_CACHE_TIME_TO_LIVE);
+		assertEquals(15_000L, JWKSourceBuilder.DEFAULT_CACHE_REFRESH_TIMEOUT);
+		assertEquals(30_000L, JWKSourceBuilder.DEFAULT_REFRESH_AHEAD_TIME);
+		assertEquals(30_000L, JWKSourceBuilder.DEFAULT_RATE_LIMIT_MIN_INTERVAL);
 	}
-
-	@Test
-	public void testShouldCreateCachedProviderWithCustomValues() {
-		JWKSource<SecurityContext> provider = builder().rateLimited(false).cache(24 * 3600 * 1000, 15 * 1000).healthReporting(false).build();
-
-		List<JWKSetSource<SecurityContext>> jwksProviders = jwksProviders(provider);
-		assertEquals(2, jwksProviders.size());
-
-		CachingJWKSetSource<SecurityContext, CachingJWKSetSource.Listener<SecurityContext>> cachedJwksProvider = (CachingJWKSetSource<SecurityContext, CachingJWKSetSource.Listener<SecurityContext>>) jwksProviders.get(0);
-
-		assertEquals(cachedJwksProvider.getTimeToLive(), TimeUnit.HOURS.toMillis(24));
-	}
-
-	@Test
-	public void testShouldCreateRateLimitedProvider() {
-		JWKSource<SecurityContext> provider = builder().rateLimited(true).build();
-
-		List<JWKSetSource<SecurityContext>> jwksProviders = jwksProviders(provider);
-		assertEquals(4, jwksProviders.size());
-
-		assertTrue(jwksProviders.get(1) instanceof RateLimitedJWKSetSource);
-	}
-
-	@Test
-	public void testShouldCreateRateLimitedProviderWithCustomValues() {
-		JWKSource<SecurityContext> provider = builder().rateLimited(30 * 1000).build();
-
-		List<JWKSetSource<SecurityContext>> jwksProviders = jwksProviders(provider);
-		assertEquals(4, jwksProviders.size());
-
-		assertTrue(jwksProviders.get(1) instanceof RateLimitedJWKSetSource);
-	}
-
-	@Test
-	public void testShouldCreateCachedAndRateLimitedProvider() {
-		JWKSource<SecurityContext> provider = builder().cache(true).rateLimited(true).build();
-
-		assertNotNull(provider);
-
-		List<JWKSetSource<SecurityContext>> jwksProviders = jwksProviders(provider);
-		assertEquals(4, jwksProviders.size());
-
-		assertTrue(jwksProviders.get(0) instanceof CachingJWKSetSource);
-		assertTrue(jwksProviders.get(1) instanceof RateLimitedJWKSetSource);
-		assertTrue(jwksProviders.get(2) instanceof JWKSetSourceWithHealthStatusReporting);
-		assertTrue(jwksProviders.get(3) instanceof JWKSetSource);
-	}
-
-	@Test
-	public void testShouldCreateCachedAndRateLimitedProviderWithCustomValues() {
-		JWKSource<SecurityContext> provider = builder().cache(24 * 3600 * 1000, 15 * 1000).rateLimited(30 * 1000).build();
-
-		assertNotNull(provider);
-
-		List<JWKSetSource<SecurityContext>> jwksProviders = jwksProviders(provider);
-		assertEquals(4, jwksProviders.size());
-
-		assertTrue(jwksProviders.get(0) instanceof CachingJWKSetSource);
-		assertTrue(jwksProviders.get(1) instanceof RateLimitedJWKSetSource);
-		assertTrue(jwksProviders.get(2) instanceof JWKSetSourceWithHealthStatusReporting);
-		assertTrue(jwksProviders.get(3) instanceof JWKSetSource);
-	}
-
-	@Test
-	public void testShouldCreateCachedAndRateLimitedProviderByDefault() {
-		JWKSource<SecurityContext> provider = builder().build();
-		assertNotNull(provider);
-
-		List<JWKSetSource<SecurityContext>> jwksProviders = jwksProviders(provider);
-		assertEquals(4, jwksProviders.size());
-
-		assertTrue(jwksProviders.get(0) instanceof CachingJWKSetSource);
-		assertTrue(jwksProviders.get(1) instanceof RateLimitedJWKSetSource);
-		assertTrue(jwksProviders.get(2) instanceof JWKSetSourceWithHealthStatusReporting);
-		assertTrue(jwksProviders.get(3) instanceof JWKSetSource);
-	}
-
-	// peek into the jwk source and get the underlying set providers
+	
+	
+	// peek into the jwk source and return the underlying sources
 	@SuppressWarnings("resource")
-	private List<JWKSetSource<SecurityContext>> jwksProviders(JWKSource<SecurityContext> jwkSource) {
+	private static List<JWKSetSource<SecurityContext>> jwksSources(JWKSource<SecurityContext> jwkSource) {
 		JWKSetBasedJWKSource<SecurityContext> remoteJWKSet = (JWKSetBasedJWKSource<SecurityContext>) jwkSource;
-
+		
 		JWKSetSource<SecurityContext> jwksProvider = remoteJWKSet.getJWKSetSource();
-
+		
 		List<JWKSetSource<SecurityContext>> list = new ArrayList<>();
-
+		
 		list.add(jwksProvider);
-
+		
 		while (jwksProvider instanceof JWKSetSourceWrapper) {
 			JWKSetSourceWrapper<SecurityContext> baseJwksProvider = (JWKSetSourceWrapper<SecurityContext>) jwksProvider;
-
 			jwksProvider = baseJwksProvider.getSource();
-
 			list.add(jwksProvider);
 		}
-
+		
 		return list;
 	}
-
+	
 	@Test
-	public void testShouldCreateRetryingProvider() {
-		JWKSource<SecurityContext> provider = builder().rateLimited(false).cache(false).refreshAheadCache(false).retrying(true).healthReporting(false).build();
-		assertNotNull(provider);
+	public void defaultBuild() {
+		JWKSource<SecurityContext> source = builder().build();
+		
+		List<JWKSetSource<SecurityContext>> jwkSetSources = jwksSources(source);
+		assertEquals(3, jwkSetSources.size());
+		
+		assertTrue(jwkSetSources.get(0) instanceof CachingJWKSetSource);
+		assertTrue(jwkSetSources.get(1) instanceof RateLimitedJWKSetSource);
+		assertTrue(jwkSetSources.get(2) instanceof JWKSetSource);
+		
+		CachingJWKSetSource<SecurityContext> caching = (CachingJWKSetSource<SecurityContext>) jwkSetSources.get(0);
+		assertEquals(JWKSourceBuilder.DEFAULT_CACHE_TIME_TO_LIVE, caching.getTimeToLive());
+		assertEquals(JWKSourceBuilder.DEFAULT_CACHE_REFRESH_TIMEOUT, caching.getCacheRefreshTimeout());
+		
+		RateLimitedJWKSetSource rateLimited = (RateLimitedJWKSetSource) jwkSetSources.get(1);
+		assertEquals(JWKSourceBuilder.DEFAULT_RATE_LIMIT_MIN_INTERVAL, rateLimited.getMinTimeInterval());
+	}
+	
+	@Test
+	public void caching_noRateLimiting() {
+		JWKSource<SecurityContext> source = builder().rateLimited(false).cache(true).build();
 
-		List<JWKSetSource<SecurityContext>> jwksProviders = jwksProviders(provider);
-		assertEquals(2, jwksProviders.size());
+		List<JWKSetSource<SecurityContext>> jwkSetSources = jwksSources(source);
+		assertEquals(2, jwkSetSources.size());
 
-		assertTrue(jwksProviders.get(0) instanceof RetryingJWKSetSource);
-		assertTrue(jwksProviders.get(1) instanceof JWKSetSource);
+		assertTrue(jwkSetSources.get(0) instanceof CachingJWKSetSource);
+		assertTrue(jwkSetSources.get(1) instanceof JWKSetSource);
+		
+		CachingJWKSetSource<SecurityContext> caching = (CachingJWKSetSource<SecurityContext>) jwkSetSources.get(0);
+		assertEquals(JWKSourceBuilder.DEFAULT_CACHE_TIME_TO_LIVE, caching.getTimeToLive());
+		assertEquals(JWKSourceBuilder.DEFAULT_CACHE_REFRESH_TIMEOUT, caching.getCacheRefreshTimeout());
+	}
+	
+	@Test
+	public void cachingForever_noRateLimiting() {
+		JWKSource<SecurityContext> source = builder().rateLimited(false).cacheForever().build();
+
+		List<JWKSetSource<SecurityContext>> jwkSetSources = jwksSources(source);
+		assertEquals(2, jwkSetSources.size());
+
+		assertTrue(jwkSetSources.get(0) instanceof CachingJWKSetSource);
+		assertTrue(jwkSetSources.get(1) instanceof JWKSetSource);
+		
+		CachingJWKSetSource<SecurityContext> caching = (CachingJWKSetSource<SecurityContext>) jwkSetSources.get(0);
+		assertEquals(Long.MAX_VALUE, caching.getTimeToLive());
+		assertEquals(JWKSourceBuilder.DEFAULT_CACHE_REFRESH_TIMEOUT, caching.getCacheRefreshTimeout());
+	}
+	
+	@Test
+	public void cachingWithCustomSettings_noRateLimiting() {
+		
+		long oneDay = TimeUnit.HOURS.toMillis(25);
+		long oneMinute = TimeUnit.MINUTES.toMillis(1);
+		
+		JWKSource<SecurityContext> source = builder().rateLimited(false).cache(oneDay, oneMinute).build();
+
+		List<JWKSetSource<SecurityContext>> jwkSetSources = jwksSources(source);
+		assertEquals(2, jwkSetSources.size());
+		
+		assertTrue(jwkSetSources.get(0) instanceof CachingJWKSetSource);
+		assertTrue(jwkSetSources.get(1) instanceof JWKSetSource);
+
+		CachingJWKSetSource<SecurityContext> caching = (CachingJWKSetSource<SecurityContext>) jwkSetSources.get(0);
+		assertEquals(oneDay, caching.getTimeToLive());
+		assertEquals(oneMinute, caching.getCacheRefreshTimeout());
+	}
+	
+	@Test
+	public void rateLimited() {
+		JWKSource<SecurityContext> source = builder().rateLimited(true).build();
+
+		List<JWKSetSource<SecurityContext>> jwkSetSources = jwksSources(source);
+		assertEquals(3, jwkSetSources.size());
+		
+		assertTrue(jwkSetSources.get(0) instanceof CachingJWKSetSource);
+		assertTrue(jwkSetSources.get(1) instanceof RateLimitedJWKSetSource);
+		assertTrue(jwkSetSources.get(2) instanceof JWKSetSource);
+		
+		RateLimitedJWKSetSource rateLimited = (RateLimitedJWKSetSource) jwkSetSources.get(1);
+		assertEquals(JWKSourceBuilder.DEFAULT_RATE_LIMIT_MIN_INTERVAL, rateLimited.getMinTimeInterval());
+	}
+	
+	@Test
+	public void rateLimitedWithCustomSettings() {
+		
+		long minInterval = 60_000L;
+		
+		JWKSource<SecurityContext> source = builder().rateLimited(minInterval).build();
+
+		List<JWKSetSource<SecurityContext>> jwkSetSources = jwksSources(source);
+		assertEquals(3, jwkSetSources.size());
+		
+		assertTrue(jwkSetSources.get(0) instanceof CachingJWKSetSource);
+		assertTrue(jwkSetSources.get(1) instanceof RateLimitedJWKSetSource);
+		assertTrue(jwkSetSources.get(2) instanceof JWKSetSource);
+		
+		RateLimitedJWKSetSource rateLimited = (RateLimitedJWKSetSource) jwkSetSources.get(1);
+		assertEquals(minInterval, rateLimited.getMinTimeInterval());
+	}
+	
+	@Test
+	public void caching_rateLimited() {
+		JWKSource<SecurityContext> source = builder().cache(true).rateLimited(true).build();
+
+		List<JWKSetSource<SecurityContext>> jwkSetSources = jwksSources(source);
+		assertEquals(3, jwkSetSources.size());
+
+		assertTrue(jwkSetSources.get(0) instanceof CachingJWKSetSource);
+		assertTrue(jwkSetSources.get(1) instanceof RateLimitedJWKSetSource);
+		assertTrue(jwkSetSources.get(2) instanceof JWKSetSource);
+		
+		CachingJWKSetSource<SecurityContext> caching = (CachingJWKSetSource<SecurityContext>) jwkSetSources.get(0);
+		assertEquals(JWKSourceBuilder.DEFAULT_CACHE_TIME_TO_LIVE, caching.getTimeToLive());
+		assertEquals(JWKSourceBuilder.DEFAULT_CACHE_REFRESH_TIMEOUT, caching.getCacheRefreshTimeout());
+		
+		RateLimitedJWKSetSource rateLimited = (RateLimitedJWKSetSource) jwkSetSources.get(1);
+		assertEquals(JWKSourceBuilder.DEFAULT_RATE_LIMIT_MIN_INTERVAL, rateLimited.getMinTimeInterval());
+	}
+	
+	@Test
+	public void cachingWithCustomSettings_rateLimitedWithCustomSettings() {
+		
+		long ttl = TimeUnit.DAYS.toMillis(2);
+		long refreshTimeout = 5_000L;
+		long rateLimitMinInterval = 10_000L;
+		
+		JWKSource<SecurityContext> source = builder()
+			.cache(ttl, refreshTimeout)
+			.rateLimited(rateLimitMinInterval)
+			.build();
+
+		List<JWKSetSource<SecurityContext>> jwkSetSources = jwksSources(source);
+		assertEquals(3, jwkSetSources.size());
+
+		assertTrue(jwkSetSources.get(0) instanceof CachingJWKSetSource);
+		assertTrue(jwkSetSources.get(1) instanceof RateLimitedJWKSetSource);
+		assertTrue(jwkSetSources.get(2) instanceof JWKSetSource);
+		
+		CachingJWKSetSource<SecurityContext> caching = (CachingJWKSetSource<SecurityContext>) jwkSetSources.get(0);
+		assertEquals(ttl, caching.getTimeToLive());
+		assertEquals(refreshTimeout, caching.getCacheRefreshTimeout());
+		
+		RateLimitedJWKSetSource rateLimited = (RateLimitedJWKSetSource) jwkSetSources.get(1);
+		assertEquals(rateLimitMinInterval, rateLimited.getMinTimeInterval());
 	}
 
 	@Test
-	public void testShouldCreateOutageCachedProvider() {
-		JWKSource<SecurityContext> provider = builder().rateLimited(false).cache(false).refreshAheadCache(false).outageTolerant(true).healthReporting(false).build();
-		assertNotNull(provider);
+	public void retrying() {
+		JWKSource<SecurityContext> source = builder()
+			.rateLimited(false)
+			.cache(false)
+			.refreshAheadCache(false)
+			.retrying(true)
+			.build();
 
-		List<JWKSetSource<SecurityContext>> jwksProviders = jwksProviders(provider);
-		assertEquals(2, jwksProviders.size());
+		List<JWKSetSource<SecurityContext>> jwkSetSources = jwksSources(source);
+		assertEquals(2, jwkSetSources.size());
 
-		assertTrue(jwksProviders.get(0) instanceof OutageTolerantJWKSetSource);
-		assertTrue(jwksProviders.get(1) instanceof JWKSetSource);
+		assertTrue(jwkSetSources.get(0) instanceof RetryingJWKSetSource);
+		assertTrue(jwkSetSources.get(1) instanceof JWKSetSource);
 	}
 
 	@Test
-	public void testShouldCreateOutageCachedProviderWithCustomValues() {
-		JWKSource<SecurityContext> provider = builder().rateLimited(false).cache(false).healthReporting(false).refreshAheadCache(false).outageTolerant(24 * 3600 * 1000).build();
+	public void outageTolerant() {
+		JWKSource<SecurityContext> source = builder()
+			.rateLimited(false)
+			.cache(false)
+			.refreshAheadCache(false)
+			.outageTolerant(true)
+			.build();
 
-		List<JWKSetSource<SecurityContext>> jwksProviders = jwksProviders(provider);
-		assertEquals(2, jwksProviders.size());
+		List<JWKSetSource<SecurityContext>> jwkSetSources = jwksSources(source);
+		assertEquals(2, jwkSetSources.size());
 
-		OutageTolerantJWKSetSource<SecurityContext> cachedJwksProvider = (OutageTolerantJWKSetSource<SecurityContext>) jwksProviders.get(0);
-
-		assertEquals(cachedJwksProvider.getTimeToLive(), TimeUnit.HOURS.toMillis(24));
+		assertTrue(jwkSetSources.get(0) instanceof OutageTolerantJWKSetSource);
+		assertTrue(jwkSetSources.get(1) instanceof JWKSetSource);
 	}
 
 	@Test
-	public void testShouldCreateCachedAndRateLimitedAndOutageAndRetryingProvider() {
-		JWKSource<SecurityContext> provider = builder().cache(true).rateLimited(true).retrying(true).outageTolerant(true).healthReporting(true).build();
+	public void outageTolerantForever() {
+		JWKSource<SecurityContext> source = builder()
+			.rateLimited(false)
+			.cache(false)
+			.refreshAheadCache(false)
+			.outageTolerantForever()
+			.build();
 
-		assertNotNull(provider);
+		List<JWKSetSource<SecurityContext>> jwkSetSources = jwksSources(source);
+		assertEquals(2, jwkSetSources.size());
 
-		List<JWKSetSource<SecurityContext>> jwksProviders = jwksProviders(provider);
-		assertEquals(6, jwksProviders.size());
-
-		assertTrue(jwksProviders.get(0) instanceof CachingJWKSetSource);
-		assertTrue(jwksProviders.get(1) instanceof RateLimitedJWKSetSource);
-		assertTrue(jwksProviders.get(2) instanceof JWKSetSourceWithHealthStatusReporting);
-		assertTrue(jwksProviders.get(3) instanceof OutageTolerantJWKSetSource);
-		assertTrue(jwksProviders.get(4) instanceof RetryingJWKSetSource);
-		assertTrue(jwksProviders.get(5) instanceof JWKSetSource);
+		assertTrue(jwkSetSources.get(0) instanceof OutageTolerantJWKSetSource);
+		assertTrue(jwkSetSources.get(1) instanceof JWKSetSource);
+		
+		assertEquals(Long.MAX_VALUE, ((OutageTolerantJWKSetSource<SecurityContext>) jwkSetSources.get(0)).getTimeToLive());
 	}
 
 	@Test
-	public void testShouldCreateWithCustomJwksProvider() {
-		JWKSetSource<SecurityContext> customJwksProvider = mock(JWKSetSource.class);
+	public void outageTolerantWithCustomSettings() {
+		
+		long outageTTL = TimeUnit.DAYS.toMillis(25);
+		
+		JWKSource<SecurityContext> source = builder()
+			.rateLimited(false)
+			.cache(false)
+			.refreshAheadCache(false)
+			.outageTolerant(outageTTL)
+			.build();
+
+		List<JWKSetSource<SecurityContext>> jwkSetSources = jwksSources(source);
+		assertEquals(2, jwkSetSources.size());
+
+		OutageTolerantJWKSetSource<SecurityContext> outageTolerant = (OutageTolerantJWKSetSource<SecurityContext>) jwkSetSources.get(0);
+		assertEquals(outageTTL, outageTolerant.getTimeToLive());
+	}
+
+	@Test
+	public void wrapCustomSource() {
+		JWKSetSource<SecurityContext> customSource = mock(JWKSetSource.class);
 
 		@SuppressWarnings("unchecked")
-		JWKSource<SecurityContext> provider = new JWKSourceBuilder<>(customJwksProvider).build();
+		JWKSource<SecurityContext> source = JWKSourceBuilder.create(customSource).build();
 
-		List<JWKSetSource<SecurityContext>> jwksProviders = jwksProviders(provider);
-		assertEquals(4, jwksProviders.size());
+		List<JWKSetSource<SecurityContext>> jwkSetSources = jwksSources(source);
+		assertEquals(3, jwkSetSources.size());
 
-		assertSame(jwksProviders.get(jwksProviders.size() - 1), customJwksProvider);
+		assertSame(jwkSetSources.get(jwkSetSources.size() - 1), customSource);
 	}
-
+	
 	@Test
-	public void testShouldCreatePreemptiveCachedProvider() {
-		JWKSource<SecurityContext> provider = builder().rateLimited(false).refreshAheadCache(10 * 1000, true).healthReporting(false).build();
-		assertNotNull(provider);
+	public void refreshAheadCaching() {
+		JWKSource<SecurityContext> source = builder().rateLimited(false).refreshAheadCache(10 * 1000, true).build();
 
-		List<JWKSetSource<SecurityContext>> jwksProviders = jwksProviders(provider);
+		List<JWKSetSource<SecurityContext>> jwksProviders = jwksSources(source);
 		assertEquals(2, jwksProviders.size());
 
 		assertTrue(jwksProviders.get(0) instanceof RefreshAheadCachingJWKSetSource);
 		assertTrue(jwksProviders.get(1) instanceof JWKSetSource);
 	}
-
+	
 	@Test
-	public void testShouldFailWhenRateLimitingWithoutCaching() {
+	public void all() {
+		
+		HealthReportListener<SecurityContext> healthReportListener = new HealthReportListener<SecurityContext>() {
+			@Override
+			public void report(HealthReport healthReport, SecurityContext context) {
+			
+			}
+		};
+		
+		JWKSource<SecurityContext> source = builder()
+			.cache(true)
+			.rateLimited(true)
+			.retrying(true)
+			.outageTolerant(true)
+			.healthReporting(healthReportListener)
+			.build();
+		
+		List<JWKSetSource<SecurityContext>> jwkSetSources = jwksSources(source);
+		assertEquals(6, jwkSetSources.size());
+		
+		assertTrue(jwkSetSources.get(0) instanceof CachingJWKSetSource);
+		assertTrue(jwkSetSources.get(1) instanceof RateLimitedJWKSetSource);
+		assertTrue(jwkSetSources.get(2) instanceof JWKSetSourceWithHealthStatusReporting);
+		assertTrue(jwkSetSources.get(3) instanceof OutageTolerantJWKSetSource);
+		assertTrue(jwkSetSources.get(4) instanceof RetryingJWKSetSource);
+		assertTrue(jwkSetSources.get(5) instanceof JWKSetSource);
+	}
+	
+	@Test
+	public void failWhenRateLimitedWithoutCaching() {
 		try {
 			builder().cache(false).rateLimited(true).build();
 			fail();
@@ -230,28 +348,66 @@ public class JWKSourceBuilderTest extends AbstractDelegateSourceTest {
 			assertEquals("Rate limiting requires caching", e.getMessage());
 		}
 	}
-
+	
 	@Test
-	public void testShouldEnableCacheWhenPreemptiveCaching() {
-		JWKSource<SecurityContext> provider = builder().rateLimited(false).cache(false).healthReporting(false).refreshAheadCache(true).build();
-
-		assertNotNull(provider);
-
-		List<JWKSetSource<SecurityContext>> jwksProviders = jwksProviders(provider);
-		assertEquals(2, jwksProviders.size());
-
-		assertTrue(jwksProviders.get(0) instanceof RefreshAheadCachingJWKSetSource);
-		assertTrue(jwksProviders.get(1) instanceof JWKSetSource);
+	public void failWhenRefreshAheadWithoutCaching() {
+		try {
+			builder().refreshAheadCache(true).cache(false).rateLimited(false).build();
+			fail();
+		} catch (IllegalStateException e) {
+			assertEquals("Refresh-ahead caching requires general caching", e.getMessage());
+		}
+	}
+	
+	@Test
+	public void failWhenOutageTolerantWithForeverCacheTTL() {
+		try {
+			builder().refreshAheadCache(true).cache(false).rateLimited(false).build();
+			fail();
+		} catch (IllegalStateException e) {
+			assertEquals("Refresh-ahead caching requires general caching", e.getMessage());
+		}
+	}
+	
+	@Test
+	public void failWhenOutageTolerantDueToNonExpiringCache() {
+		try {
+			builder().cacheForever().outageTolerant(Long.MAX_VALUE).build();
+			fail();
+		} catch (IllegalStateException e) {
+			assertEquals("Outage tolerance not necessary with a non-expiring cache", e.getMessage());
+		}
+	}
+	
+	@Test
+	public void failWhenRefreshAheadDueToNonExpiringCache() {
+		try {
+			builder().cacheForever().refreshAheadCache(true).build();
+			fail();
+		} catch (IllegalStateException e) {
+			assertEquals("Refresh-ahead caching not necessary with a non-expiring cache", e.getMessage());
+		}
 	}
 
 	@Test
-	public void testShouldLocalProviderForFileURL() throws MalformedURLException {
+	public void enableCacheWhenRefreshAhead() {
+		JWKSource<SecurityContext> source = builder().rateLimited(false).cache(false).refreshAheadCache(true).build();
+
+		List<JWKSetSource<SecurityContext>> jwkSetSources = jwksSources(source);
+		assertEquals(2, jwkSetSources.size());
+
+		assertTrue(jwkSetSources.get(0) instanceof RefreshAheadCachingJWKSetSource);
+		assertTrue(jwkSetSources.get(1) instanceof JWKSetSource);
+	}
+
+	@Test
+	public void fileURL() throws MalformedURLException {
 		File file = new File("test");
 		URL url = file.toURI().toURL();
-		JWKSource<SecurityContext> source = JWKSourceBuilder.newBuilder(url).build();
+		JWKSource<SecurityContext> source = JWKSourceBuilder.create(url).build();
 		
-		List<JWKSetSource<SecurityContext>> jwksProviders = jwksProviders(source);
+		List<JWKSetSource<SecurityContext>> jwkSetSources = jwksSources(source);
 
-		assertTrue(jwksProviders.get(jwksProviders.size() - 1) instanceof URLBasedJWKSetSource);
+		assertTrue(jwkSetSources.get(jwkSetSources.size() - 1) instanceof URLBasedJWKSetSource);
 	}
 }

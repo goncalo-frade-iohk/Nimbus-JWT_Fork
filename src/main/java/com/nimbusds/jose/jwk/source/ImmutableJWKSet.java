@@ -26,9 +26,6 @@ import com.nimbusds.jose.jwk.JWK;
 import com.nimbusds.jose.jwk.JWKSelector;
 import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.proc.SecurityContext;
-import com.nimbusds.jose.util.health.HealthReport;
-import com.nimbusds.jose.util.health.HealthStatus;
-import com.nimbusds.jose.util.health.HealthStatusReporting;
 
 
 /**
@@ -36,10 +33,10 @@ import com.nimbusds.jose.util.health.HealthStatusReporting;
  *
  * @author Vladimir Dzhuvinov
  * @author Thomas Rørvik Skjølberg
- * @version 2022-04-09
+ * @version 2022-08-24
  */
 @Immutable
-public class ImmutableJWKSet<C extends SecurityContext> implements JWKSource<C>, HealthStatusReporting<C> {
+public class ImmutableJWKSet<C extends SecurityContext> implements JWKSource<C> {
 
 
 	/**
@@ -78,11 +75,5 @@ public class ImmutableJWKSet<C extends SecurityContext> implements JWKSource<C>,
 	public List<JWK> get(final JWKSelector jwkSelector, final C context) {
 
 		return jwkSelector.select(jwkSet);
-	}
-
-
-	@Override
-	public HealthReport reportHealthStatus(final boolean refresh, final C context) {
-		return new HealthReport(HealthStatus.HEALTHY);
 	}
 }

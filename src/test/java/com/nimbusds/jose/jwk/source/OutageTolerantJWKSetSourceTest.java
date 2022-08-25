@@ -17,40 +17,35 @@
 
 package com.nimbusds.jose.jwk.source;
 
-import com.nimbusds.jose.jwk.JWKSet;
-import com.nimbusds.jose.jwk.source.log.OutageTolerantJWKSetSourceLogger;
-import com.nimbusds.jose.proc.SecurityContext;
-import com.nimbusds.jose.util.cache.CachedObject;
-
-import org.junit.Before;
-import org.junit.Test;
 
 import java.util.Arrays;
-import java.util.logging.Level;
 
 import static junit.framework.TestCase.assertEquals;
 import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
-public class OutageTolerantJWKSetSourceTest extends AbstractDelegateSourceTest {
+import org.junit.Before;
+import org.junit.Test;
+
+import com.nimbusds.jose.jwk.JWKSet;
+import com.nimbusds.jose.proc.SecurityContext;
+import com.nimbusds.jose.util.cache.CachedObject;
+
+public class OutageTolerantJWKSetSourceTest extends AbstractWrappedJWKSetSourceTest {
 
 	private OutageTolerantJWKSetSource<SecurityContext> source;
-
-	private OutageTolerantJWKSetSource.Listener<SecurityContext> listener = new OutageTolerantJWKSetSourceLogger<>(Level.INFO, Level.WARNING);
 	
 	@Before
 	public void setUp() throws Exception {
 		super.setUp();
-		source = new OutageTolerantJWKSetSource<>(delegate, 10 * 3600 * 1000, listener);
+		source = new OutageTolerantJWKSetSource<>(wrappedJWKSetSource, 10 * 3600 * 1000);
 	}
 
 	@Test
 	public void testShouldUseDelegate() throws Exception {
-		when(delegate.getJWKSet(eq(false), anyLong(), anySecurityContext())).thenReturn(jwkSet);
+		when(wrappedJWKSetSource.getJWKSet(eq(false), anyLong(), anySecurityContext())).thenReturn(jwkSet);
 		assertEquals(source.getJWKSet(false, System.currentTimeMillis(), context), jwkSet);
 	}
 
@@ -58,22 +53,22 @@ public class OutageTolerantJWKSetSourceTest extends AbstractDelegateSourceTest {
 	public void testShouldUseDelegateWhenCached() throws Exception {
 		JWKSet last = new JWKSet(Arrays.asList(jwk, jwk));
 
-		when(delegate.getJWKSet(eq(false), anyLong(), anySecurityContext())).thenReturn(jwkSet).thenReturn(last);
+		when(wrappedJWKSetSource.getJWKSet(eq(false), anyLong(), anySecurityContext())).thenReturn(jwkSet).thenReturn(last);
 		assertEquals(source.getJWKSet(false, System.currentTimeMillis(), context), jwkSet);
 		assertEquals(source.getJWKSet(false, System.currentTimeMillis(), context), last);
 	}
 
 	@Test
 	public void testShouldUseCacheWhenDelegateSigningKeyUnavailable() throws Exception {
-		when(delegate.getJWKSet(eq(false), anyLong(), anySecurityContext())).thenReturn(jwkSet).thenThrow(new JWKSetUnavailableException("TEST", null));
+		when(wrappedJWKSetSource.getJWKSet(eq(false), anyLong(), anySecurityContext())).thenReturn(jwkSet).thenThrow(new JWKSetUnavailableException("TEST", null));
 		source.getJWKSet(false, System.currentTimeMillis(), context);
 		assertEquals(source.getJWKSet(false, System.currentTimeMillis(), context), jwkSet);
-		verify(delegate, times(2)).getJWKSet(eq(false), anyLong(), anySecurityContext());
+		verify(wrappedJWKSetSource, times(2)).getJWKSet(eq(false), anyLong(), anySecurityContext());
 	}
 
 	@Test
 	public void testShouldNotUseExpiredCacheWhenDelegateSigningKeyUnavailable() throws Exception {
-		when(delegate.getJWKSet(eq(false), anyLong(), anySecurityContext())).thenReturn(jwkSet).thenThrow(new JWKSetUnavailableException("TEST", null));
+		when(wrappedJWKSetSource.getJWKSet(eq(false), anyLong(), anySecurityContext())).thenReturn(jwkSet).thenThrow(new JWKSetUnavailableException("TEST", null));
 		source.getJWKSet(false, System.currentTimeMillis(), context);
 
 		try {
@@ -86,6 +81,6 @@ public class OutageTolerantJWKSetSourceTest extends AbstractDelegateSourceTest {
 
 	@Test
 	public void testShouldGetBaseProvider() {
-		assertEquals(source.getSource(), delegate);
+		assertEquals(source.getSource(), wrappedJWKSetSource);
 	}
 }

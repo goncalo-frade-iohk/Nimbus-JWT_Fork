@@ -20,6 +20,9 @@ package com.nimbusds.jose.util.health;
 
 /**
  * Health status.
+ *
+ * @version 2022-08-24
+ * @author Vladimir Dzhuvinov
  */
 public enum HealthStatus {
 	
@@ -33,17 +36,5 @@ public enum HealthStatus {
 	/**
 	 * Not healthy (error).
 	 */
-	NOT_HEALTHY,
-	
-	
-	/**
-	 * Unknown (health status currently not available).
-	 */
-	UNKNOWN,
-	
-	
-	/**
-	 * Health status reporting not supported.
-	 */
-	NOT_SUPPORTED
+	NOT_HEALTHY
 }

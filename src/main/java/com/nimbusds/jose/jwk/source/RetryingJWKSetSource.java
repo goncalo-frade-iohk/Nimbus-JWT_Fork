@@ -30,16 +30,10 @@ import com.nimbusds.jose.proc.SecurityContext;
  * {@linkplain JWKSetUnavailableException} the retrieval is tried once again.
  *
  * @author Thomas Rørvik Skjølberg
- * @version 2022-04-09
+ * @version 2022-08-24
  */
 @ThreadSafe
 public class RetryingJWKSetSource<C extends SecurityContext> extends JWKSetSourceWrapper<C> {
-
-	public interface Listener<C extends SecurityContext> extends JWKSetSourceListener<C> {
-		void onRetrying(Exception e, C context);
-	}
-	
-	private final Listener<C> listener;
 	
 	
 	/**
@@ -47,11 +41,9 @@ public class RetryingJWKSetSource<C extends SecurityContext> extends JWKSetSourc
 	 *
 	 * @param source   The JWK set source to decorate. Must not be
 	 *                 {@code null}.
-	 * @param listener The listener, {@code null} if not specified.
 	 */
-	public RetryingJWKSetSource(final JWKSetSource<C> source, final Listener<C> listener) {
+	public RetryingJWKSetSource(final JWKSetSource<C> source) {
 		super(source);
-		this.listener = listener;
 	}
 
 	
@@ -64,9 +56,6 @@ public class RetryingJWKSetSource<C extends SecurityContext> extends JWKSetSourc
 			
 		} catch (JWKSetUnavailableException e) {
 			// assume transient network issue, retry once
-			if (listener != null) {
-				listener.onRetrying(e, context);
-			}
 			return getSource().getJWKSet(forceReload, currentTime, context);
 		}
 	}

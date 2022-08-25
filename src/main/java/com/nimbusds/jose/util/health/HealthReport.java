@@ -25,6 +25,9 @@ import net.jcip.annotations.Immutable;
 
 /**
  * Health report.
+ *
+ * @version 2022-08-24
+ * @author Vladimir Dzhuvinov
  */
 @Immutable
 public class HealthReport {
@@ -34,6 +37,12 @@ public class HealthReport {
 	 * The health status.
 	 */
 	private final HealthStatus status;
+	
+	
+	/**
+	 * The exception in case of a {@link HealthStatus#NOT_HEALTHY}.
+	 */
+	private final Exception exception;
 	
 	
 	/**
@@ -60,8 +69,25 @@ public class HealthReport {
 	 *                  epoch.
 	 */
 	public HealthReport(final HealthStatus status, final long timestamp) {
+		this(status, null, timestamp);
+	}
+	
+	
+	/**
+	 * Creates a new health report.
+	 *
+	 * @param status    The health status. Must not be {@code null}.
+	 * @param exception The exception in case of a
+	 *                  {@link HealthStatus#NOT_HEALTHY}, {@code null} if
+	 *                  not specified.
+	 *
+	 * @param timestamp The timestamp, in milliseconds since the Unix
+	 *                  epoch.
+	 */
+	public HealthReport(final HealthStatus status, final Exception exception, final long timestamp) {
 		Objects.requireNonNull(status);
 		this.status = status;
+		this.exception = exception;
 		this.timestamp = timestamp;
 	}
 	
@@ -73,6 +99,17 @@ public class HealthReport {
 	 */
 	public HealthStatus getHealthStatus() {
 		return status;
+	}
+	
+	
+	/**
+	 * Returns the recorded exception in case of a
+	 * {@link HealthStatus#NOT_HEALTHY}.
+	 *
+	 * @return The exception, {@code null} if not specified.
+	 */
+	public Exception getException() {
+		return exception;
 	}
 	
 	

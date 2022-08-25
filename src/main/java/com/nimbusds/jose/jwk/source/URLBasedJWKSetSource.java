@@ -17,6 +17,7 @@
 
 package com.nimbusds.jose.jwk.source;
 
+
 import java.io.IOException;
 import java.net.URL;
 import java.util.Objects;
@@ -28,8 +29,6 @@ import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.proc.SecurityContext;
 import com.nimbusds.jose.util.Resource;
 import com.nimbusds.jose.util.ResourceRetriever;
-import com.nimbusds.jose.util.health.HealthReport;
-import com.nimbusds.jose.util.health.HealthStatus;
 
 
 /**
@@ -37,7 +36,8 @@ import com.nimbusds.jose.util.health.HealthStatus;
  * reporting.
  *
  * @author Thomas Rørvik Skjølberg
- * @version 2022-04-09
+ * @author Vladimir Dzhuvinov
+ * @version 2022-08-24
  */
 @ThreadSafe
 public class URLBasedJWKSetSource<C extends SecurityContext> implements JWKSetSource<C> {
@@ -89,10 +89,5 @@ public class URLBasedJWKSetSource<C extends SecurityContext> implements JWKSetSo
 	@Override
 	public void close() throws IOException {
 		// do nothing
-	}
-	
-	
-	public HealthReport reportHealthStatus(final boolean refresh, final C context) {
-		return new HealthReport(HealthStatus.NOT_SUPPORTED);
 	}
 }

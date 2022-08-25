@@ -22,6 +22,7 @@ import java.util.Date;
 
 import junit.framework.TestCase;
 
+import com.nimbusds.jose.KeySourceException;
 import com.nimbusds.jwt.util.DateUtils;
 
 
@@ -33,6 +34,7 @@ public class HealthReportTest extends TestCase {
 		HealthReport report = new HealthReport(HealthStatus.HEALTHY);
 		assertEquals(HealthStatus.HEALTHY, report.getHealthStatus());
 		DateUtils.isWithin(DateUtils.fromSecondsSinceEpoch(report.getTimestamp() / 1000L), new Date(), 1);
+		assertNull(report.getException());
 		assertTrue(report.toString().startsWith("HealthReport{status=HEALTHY, timestamp="));
 	}
 
@@ -43,6 +45,22 @@ public class HealthReportTest extends TestCase {
 		
 		HealthReport report = new HealthReport(HealthStatus.NOT_HEALTHY, timestamp);
 		assertEquals(HealthStatus.NOT_HEALTHY, report.getHealthStatus());
+		assertNull(report.getException());
+		assertEquals(timestamp, report.getTimestamp());
+		
+		assertEquals("HealthReport{status=NOT_HEALTHY, timestamp=" + timestamp + "}", report.toString());
+	}
+
+
+	public void testFullConstructor_notHealthy() {
+		
+		long timestamp = new Date().getTime();
+		
+		Exception exception = new KeySourceException("JWK set retrieval failed");
+		
+		HealthReport report = new HealthReport(HealthStatus.NOT_HEALTHY, exception, timestamp);
+		assertEquals(HealthStatus.NOT_HEALTHY, report.getHealthStatus());
+		assertEquals(exception, report.getException());
 		assertEquals(timestamp, report.getTimestamp());
 		
 		assertEquals("HealthReport{status=NOT_HEALTHY, timestamp=" + timestamp + "}", report.toString());

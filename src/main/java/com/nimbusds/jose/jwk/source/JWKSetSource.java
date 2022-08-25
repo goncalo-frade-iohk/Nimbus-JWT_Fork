@@ -23,16 +23,16 @@ import java.io.Closeable;
 import com.nimbusds.jose.KeySourceException;
 import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.proc.SecurityContext;
-import com.nimbusds.jose.util.health.HealthStatusReporting;
 
 
 /**
- * JSON Web Key (JWK) set source with optional health status reporting.
+ * JSON Web Key (JWK) set source.
  *
  * @author Thomas Rørvik Skjølberg
- * @version 2022-04-09
+ * @author Vladimir Dzhuvinov
+ * @version 2022-08-24
  */
-public interface JWKSetSource<C extends SecurityContext> extends HealthStatusReporting<C>, Closeable {
+public interface JWKSetSource<C extends SecurityContext> extends Closeable {
 
 	
 	/**

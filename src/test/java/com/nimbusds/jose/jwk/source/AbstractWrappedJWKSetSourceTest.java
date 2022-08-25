@@ -31,11 +31,12 @@ import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.proc.SecurityContext;
 import com.nimbusds.jose.proc.SimpleSecurityContext;
 
-public abstract class AbstractDelegateSourceTest {
+
+public abstract class AbstractWrappedJWKSetSourceTest {
 
 	protected static final String KID = "NkJCQzIyQzRBMEU4NjhGNUU4MzU4RkY0M0ZDQzkwOUQ0Q0VGNUMwQg";
 
-	protected JWKSetSource<SecurityContext> delegate;
+	protected JWKSetSource<SecurityContext> wrappedJWKSetSource;
 
 	protected JWK jwk;
 
@@ -50,16 +51,16 @@ public abstract class AbstractDelegateSourceTest {
 	@SuppressWarnings("unchecked")
 	@Before
 	public void setUp() throws Exception {
-		delegate = mock(JWKSetSource.class);
+		wrappedJWKSetSource = mock(JWKSetSource.class);
 		jwk = mock(JWK.class);
 		when(jwk.getKeyID()).thenReturn(KID);
 		jwkSet = new JWKSet(jwk);
 
-		when(delegate.getJWKSet(eq(false), anyLong(), any(SecurityContext.class))).thenReturn(jwkSet);
+		when(wrappedJWKSetSource.getJWKSet(eq(false), anyLong(), any(SecurityContext.class))).thenReturn(jwkSet);
 	}
 	
 	protected JWKSourceBuilder<SecurityContext> builder() {
-		return new JWKSourceBuilder<>(delegate);
+		return JWKSourceBuilder.create(wrappedJWKSetSource);
 	}
 	
 	protected static SecurityContext anySecurityContext() {

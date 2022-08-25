@@ -17,19 +17,20 @@
 
 package com.nimbusds.jose.jwk.source;
 
+
 import java.io.IOException;
 import java.util.Objects;
 
 import com.nimbusds.jose.proc.SecurityContext;
-import com.nimbusds.jose.util.health.HealthReport;
 
 
 /**
- * Wraps a {@linkplain JWKSetSource} to provide convenient decoration be means
+ * Wraps a {@linkplain JWKSetSource} to provide convenient decoration by means
  * of subclassing. Implements the Wrapper or Decorator pattern.
  *
  * @author Thomas Rørvik Skjølberg
- * @version 2022-04-09
+ * @author Vladimir Dzhuvinov
+ * @version 2022-08-24
  */
 public abstract class JWKSetSourceWrapper<C extends SecurityContext> implements JWKSetSource<C> {
 	
@@ -64,11 +65,5 @@ public abstract class JWKSetSourceWrapper<C extends SecurityContext> implements 
 	@Override
 	public void close() throws IOException {
 		source.close();
-	}
-
-	
-	@Override
-	public HealthReport reportHealthStatus(final boolean refresh, final C context) {
-		return source.reportHealthStatus(refresh, context);
 	}
 }

@@ -33,27 +33,15 @@ import com.nimbusds.jose.util.cache.CachedObject;
  * Caching {@linkplain JWKSetSource}. Blocks during cache updates.
  *
  * @author Thomas Rørvik Skjølberg
- * @version 2022-04-09
+ * @author Vladimir Dzhuvinov
+ * @version 2022-08-24
  */
 @ThreadSafe
-public class CachingJWKSetSource<C extends SecurityContext, L extends CachingJWKSetSource.Listener<C>> extends AbstractCachingJWKSetSource<C> {
-
-	public interface Listener<C extends SecurityContext> extends JWKSetSourceListener<C> {
-		
-		void onPendingCacheRefresh(int queueLength, C context);
-		void onCacheRefreshed(int jwksCount, int queueLength, C context);
-		
-		void onUnableToRefreshCache(C context);
-		
-		void onWaitingForCacheRefresh(long timeout, int queueLength, C context);
-		void onTimeoutWaitingForCacheRefresh(long timeout, int queueLength, C context);
-	}
+public class CachingJWKSetSource<C extends SecurityContext> extends AbstractCachingJWKSetSource<C> {
 	
 	private final ReentrantLock lock = new ReentrantLock();
 
 	private final long cacheRefreshTimeout;
-	
-	protected final L listener;
 	
 	
 	/**
@@ -65,13 +53,10 @@ public class CachingJWKSetSource<C extends SecurityContext, L extends CachingJWK
 	 * 	                      in milliseconds.
 	 * @param cacheRefreshTimeout The cache refresh timeout, in
 	 *                            milliseconds.
-	 * @param listener            The listener, {@code null} if not
-	 *                            specified.
 	 */
-	public CachingJWKSetSource(final JWKSetSource<C> source, final long timeToLive, final long cacheRefreshTimeout, final L listener) {
+	public CachingJWKSetSource(final JWKSetSource<C> source, final long timeToLive, final long cacheRefreshTimeout) {
 		super(source, timeToLive);
 		this.cacheRefreshTimeout = cacheRefreshTimeout;
-		this.listener = listener;
 	}
 
 	
@@ -129,15 +114,8 @@ public class CachingJWKSetSource<C extends SecurityContext, L extends CachingJWK
 					if (! isCacheUpdatedSince(currentTime)) {
 						// Seems cache was not updated.
 						// We hold the lock, so safe to update it now
-						if (listener != null) {
-							listener.onPendingCacheRefresh(lock.getQueueLength(), context);
-						}
 						
 						CachedObject<JWKSet> result = loadJWKSetNotThreadSafe(currentTime, context);
-
-						if (listener != null) {
-							listener.onCacheRefreshed(result.get().size(), lock.getQueueLength(), context);
-						}
 						
 						cache = result;
 					} else {
@@ -148,9 +126,6 @@ public class CachingJWKSetSource<C extends SecurityContext, L extends CachingJWK
 					lock.unlock();
 				}
 			} else {
-				if (listener != null) {
-					listener.onWaitingForCacheRefresh(getCacheRefreshTimeout(), lock.getQueueLength(), context);
-				}
 
 				if (lock.tryLock(getCacheRefreshTimeout(), TimeUnit.MILLISECONDS)) {
 					try {
@@ -159,15 +134,8 @@ public class CachingJWKSetSource<C extends SecurityContext, L extends CachingJWK
 						if (! isCacheUpdatedSince(currentTime)) {
 							// Seems cache was not updated.
 							// We hold the lock, so safe to update it now
-							if (listener != null) {
-								listener.onPendingCacheRefresh(lock.getQueueLength(), context);
-							}
 							
 							cache = loadJWKSetNotThreadSafe(currentTime, context);
-							
-							if (listener != null) {
-								listener.onCacheRefreshed(cache.get().size(), lock.getQueueLength(), context);
-							}
 						} else {
 							// load updated value
 							cache = getCachedJWKSet();
@@ -176,9 +144,6 @@ public class CachingJWKSetSource<C extends SecurityContext, L extends CachingJWK
 						lock.unlock();
 					}
 				} else {
-					if (listener != null) {
-						listener.onTimeoutWaitingForCacheRefresh(getCacheRefreshTimeout(), lock.getQueueLength(), context);
-					}
 
 					throw new JWKSetUnavailableException("Timeout while waiting for refreshed cache (limit of " + cacheRefreshTimeout + "ms exceed).");
 				}
@@ -186,10 +151,6 @@ public class CachingJWKSetSource<C extends SecurityContext, L extends CachingJWK
 
 			if (cache != null && cache.isValid(currentTime)) {
 				return cache.get();
-			}
-
-			if (listener != null) {
-				listener.onUnableToRefreshCache(context);
 			}
 			
 			throw new JWKSetUnavailableException("Unable to refresh cache");

@@ -42,25 +42,10 @@ import com.nimbusds.jose.util.cache.CachedObject;
  * expires (and must be refreshed).
  *
  * @author Thomas Rørvik Skjølberg
- * @version 2022-04-09
+ * @version 2022-08-24
  */
 @ThreadSafe
-public class RefreshAheadCachingJWKSetSource<C extends SecurityContext> extends CachingJWKSetSource<C, RefreshAheadCachingJWKSetSource.Listener<C>> {
-
-	public interface Listener<C extends SecurityContext> extends CachingJWKSetSource.Listener<C> {
-		
-		void onCacheRefreshScheduled(long time, C context);
-
-		void onCacheRefreshNotScheduled(C context);
-
-		void onScheduledCacheRefreshFailed(Exception e, C context);
-
-		void onInitiatedCacheRefreshAheadOfExpiration(C context);
-
-		void onCacheRefreshedAheadOfExpiration(C context);
-
-		void onUnableToRefreshCacheAheadOfExpiration(C context);
-	}
+public class RefreshAheadCachingJWKSetSource<C extends SecurityContext> extends CachingJWKSetSource<C> {
 	
 	// refresh ahead of expiration should execute when
 	// expirationTime - refreshAheadTime < currentTime < expirationTime
@@ -90,18 +75,15 @@ public class RefreshAheadCachingJWKSetSource<C extends SecurityContext> extends 
 	 * @param refreshAheadTime    The refresh ahead time, in milliseconds.
 	 * @param scheduled           {@code true} to refresh in a scheduled
 	 *                            manner, regardless of requests.
-	 * @param listener            The listener, {@code null} if not
-	 *                            specified.
 	 */
 	public RefreshAheadCachingJWKSetSource(final JWKSetSource<C> source,
 					       final long timeToLive,
 					       final long cacheRefreshTimeout,
 					       final long refreshAheadTime,
-					       final boolean scheduled,
-					       final Listener<C> listener) {
+					       final boolean scheduled) {
 		
 		this(source, timeToLive, cacheRefreshTimeout, refreshAheadTime,
-			scheduled, Executors.newSingleThreadExecutor(), true, listener);
+			scheduled, Executors.newSingleThreadExecutor(), true);
 	}
 	
 
@@ -125,8 +107,6 @@ public class RefreshAheadCachingJWKSetSource<C extends SecurityContext> extends 
 	 * @param shutdownExecutorOnClose If {@code true} the executor service
 	 *                                will be shut down upon closing the
 	 *                                source.
-	 * @param listener                The listener, {@code null} if not
-	 *                                specified.
 	 */
 	public RefreshAheadCachingJWKSetSource(final JWKSetSource<C> source,
 					       final long timeToLive,
@@ -134,10 +114,9 @@ public class RefreshAheadCachingJWKSetSource<C extends SecurityContext> extends 
 					       final long refreshAheadTime,
 					       final boolean scheduled,
 					       final ExecutorService executorService,
-					       final boolean shutdownExecutorOnClose,
-					       final Listener<C> listener) {
+					       final boolean shutdownExecutorOnClose) {
 		
-		super(source, timeToLive, cacheRefreshTimeout, listener);
+		super(source, timeToLive, cacheRefreshTimeout);
 
 		if (refreshAheadTime + cacheRefreshTimeout > timeToLive) {
 			throw new IllegalArgumentException("The sum of the refresh-ahead time (" + refreshAheadTime +"ms) " +
@@ -206,21 +185,13 @@ public class RefreshAheadCachingJWKSetSource<C extends SecurityContext> extends 
 						// so will only refresh if this specific cache entry still is the current one
 						refreshAheadOfExpiration(cache, true, System.currentTimeMillis(), context);
 					} catch (Exception e) {
-						if (listener != null) {
-							listener.onScheduledCacheRefreshFailed(e, context);
-						}
+						// ignore
 					}
 				}
 			};
 			this.scheduledRefreshFuture = scheduledExecutorService.schedule(command, delay, TimeUnit.MILLISECONDS);
-
-			if (listener != null) {
-				listener.onCacheRefreshScheduled(delay, context);
-			}
 		} else {
-			if (listener != null) {
-				listener.onCacheRefreshNotScheduled(context);
-			}
+			// cache refresh not scheduled
 		}
 	}
 
@@ -273,15 +244,7 @@ public class RefreshAheadCachingJWKSetSource<C extends SecurityContext> extends 
 				@Override
 				public void run() {
 					try {
-						if (listener != null) {
-							listener.onInitiatedCacheRefreshAheadOfExpiration(context);
-						}
-						
 						RefreshAheadCachingJWKSetSource.this.loadJWKSetBlocking(currentTime, context);
-
-						if (listener != null) {
-							listener.onCacheRefreshedAheadOfExpiration(context);
-						}
 
 						// so next time this method is invoked, it'll be with the updated cache item expiry time
 					} catch (Throwable e) {
@@ -289,9 +252,6 @@ public class RefreshAheadCachingJWKSetSource<C extends SecurityContext> extends 
 						cacheExpiration = -1L;
 						// ignore, unable to update
 						// another thread will attempt the same
-						if (listener != null) {
-							listener.onUnableToRefreshCacheAheadOfExpiration(context);
-						}
 					}
 				}
 			};

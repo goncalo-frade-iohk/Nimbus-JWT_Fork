@@ -35,19 +35,15 @@ import com.nimbusds.jose.proc.SecurityContext;
  * is (sometimes) consumed by background refreshes.
  *
  * @author Thomas Rørvik Skjølberg
- * @version 2022-04-09
+ * @author Vladimir Dzhuvinov
+ * @version 2022-08-25
  */
 @ThreadSafe
 public class RateLimitedJWKSetSource<C extends SecurityContext> extends JWKSetSourceWrapper<C> {
-
-	public interface Listener<C extends SecurityContext> extends JWKSetSourceListener<C> {
-		void onRateLimited(final long duration, final long remaining, final C context);
-	}
 	
 	private final long minTimeInterval;
 	private long nextOpeningTime = -1L;
 	private int counter = 0;
-	private final Listener<C> listener;
 
 	
 	/**
@@ -57,12 +53,10 @@ public class RateLimitedJWKSetSource<C extends SecurityContext> extends JWKSetSo
 	 *                        {@code null}.
 	 * @param minTimeInterval The minimum allowed time interval between two
 	 *                        JWK set retrievals, in milliseconds.
-	 * @param listener        The listener, {@code null} if not specified.
 	 */
-	public RateLimitedJWKSetSource(final JWKSetSource<C> source, final long minTimeInterval, final Listener<C> listener) {
+	public RateLimitedJWKSetSource(final JWKSetSource<C> source, final long minTimeInterval) {
 		super(source);
 		this.minTimeInterval = minTimeInterval;
-		this.listener = listener;
 	}
 	
 	
@@ -87,9 +81,20 @@ public class RateLimitedJWKSetSource<C extends SecurityContext> extends JWKSetSo
 			}
 		}
 		if (rateLimitHit) {
-			listener.onRateLimited(minTimeInterval, nextOpeningTime - currentTime, context);
 			throw new RateLimitReachedException();
 		}
 		return getSource().getJWKSet(forceReload, currentTime, context);
+	}
+	
+	
+	/**
+	 * Returns the minimum allowed time interval between two JWK set
+	 * retrievals.
+	 *
+	 * @return The minimum allowed time interval between two JWK set
+	 *         retrievals, in milliseconds.
+	 */
+	public long getMinTimeInterval() {
+		return minTimeInterval;
 	}
 }

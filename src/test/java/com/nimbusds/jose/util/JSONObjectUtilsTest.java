@@ -34,7 +34,7 @@ import com.nimbusds.jwt.util.DateUtilsTest;
  * Tests the JSON object utilities.
  *
  * @author Vladimir Dzhuvinov
- * @version 2022-08-19
+ * @version 2022-08-26
  */
 public class JSONObjectUtilsTest extends TestCase {
 	
@@ -58,8 +58,20 @@ public class JSONObjectUtilsTest extends TestCase {
 		
 		try {
 			JSONObjectUtils.parse("{}a");
+			fail();
 		} catch (ParseException e) {
 			assertTrue(e.getMessage().startsWith("Invalid JSON:"));
+		}
+	}
+	
+	
+	public void testParseDuplicateMember() {
+		
+		try {
+			JSONObjectUtils.parse("{\"iat\":1661335547,\"iat\":1661335547}");
+			fail();
+		} catch (ParseException e) {
+			assertEquals("Invalid JSON: duplicate key: iat", e.getMessage());
 		}
 	}
 	

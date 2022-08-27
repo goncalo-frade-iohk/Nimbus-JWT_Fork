@@ -17,6 +17,8 @@
 
 package com.nimbusds.jose.jwk.source;
 
+import java.util.Objects;
+
 import net.jcip.annotations.ThreadSafe;
 
 import com.nimbusds.jose.KeySourceException;
@@ -30,10 +32,40 @@ import com.nimbusds.jose.proc.SecurityContext;
  * {@linkplain JWKSetUnavailableException} the retrieval is tried once again.
  *
  * @author Thomas Rørvik Skjølberg
- * @version 2022-08-24
+ * @version 2022-08-28
  */
 @ThreadSafe
 public class RetryingJWKSetSource<C extends SecurityContext> extends JWKSetSourceWrapper<C> {
+	
+	
+	/**
+	 * Retrial event.
+	 */
+	public static class RetrialEvent<C extends SecurityContext> extends AbstractJWKSetSourceEvent<RetryingJWKSetSource<C>, C> {
+		
+		private final Exception exception;
+		
+		private RetrialEvent(final RetryingJWKSetSource<C> source,
+				     final Exception exception,
+				     final C securityContext) {
+			super(source, securityContext);
+			Objects.requireNonNull(exception);
+			this.exception = exception;
+		}
+		
+		
+		/**
+		 * Returns the exception that caused the retrial.
+		 *
+		 * @return The exception.
+		 */
+		public Exception getException() {
+			return exception;
+		}
+	}
+	
+	
+	private final JWKSetSourceEventListener<RetryingJWKSetSource<C>, C> eventListener;
 	
 	
 	/**
@@ -43,7 +75,22 @@ public class RetryingJWKSetSource<C extends SecurityContext> extends JWKSetSourc
 	 *                 {@code null}.
 	 */
 	public RetryingJWKSetSource(final JWKSetSource<C> source) {
+		this(source, null);
+	}
+	
+	
+	/**
+	 * Creates a new JWK set source with support for retrial.
+	 *
+	 * @param source        The JWK set source to decorate. Must not be
+	 *                      {@code null}.
+	 * @param eventListener The event listener, {@code null} if not
+	 *                      specified.
+	 */
+	public RetryingJWKSetSource(final JWKSetSource<C> source,
+				    final JWKSetSourceEventListener<RetryingJWKSetSource<C>, C> eventListener) {
 		super(source);
+		this.eventListener = eventListener;
 	}
 
 	
@@ -56,6 +103,9 @@ public class RetryingJWKSetSource<C extends SecurityContext> extends JWKSetSourc
 			
 		} catch (JWKSetUnavailableException e) {
 			// assume transient network issue, retry once
+			if (eventListener != null) {
+				eventListener.receive(new RetrialEvent<C>(this, e, context));
+			}
 			return getSource().getJWKSet(forceReload, currentTime, context);
 		}
 	}

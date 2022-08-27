@@ -19,14 +19,16 @@ package com.nimbusds.jose.jwk.source;
 
 
 import java.util.Arrays;
+import java.util.LinkedList;
+import java.util.List;
 
 import static junit.framework.TestCase.assertEquals;
+import static junit.framework.TestCase.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
-import org.junit.Before;
 import org.junit.Test;
 
 import com.nimbusds.jose.jwk.JWKSet;
@@ -35,39 +37,84 @@ import com.nimbusds.jose.util.cache.CachedObject;
 
 public class OutageTolerantJWKSetSourceTest extends AbstractWrappedJWKSetSourceTest {
 
-	private OutageTolerantJWKSetSource<SecurityContext> source;
+	private static final long TIME_TO_LIVE = 10 * 3600 * 1000;
 	
-	@Before
-	public void setUp() throws Exception {
-		super.setUp();
-		source = new OutageTolerantJWKSetSource<>(wrappedJWKSetSource, 10 * 3600 * 1000);
-	}
+	private final List<OutageTolerantJWKSetSource.OutageEvent<SecurityContext>> events = new LinkedList<>();
+	
+	private final JWKSetSourceEventListener<OutageTolerantJWKSetSource<SecurityContext>,SecurityContext> eventListener =
+		new JWKSetSourceEventListener<OutageTolerantJWKSetSource<SecurityContext>, SecurityContext>() {
+			@Override
+			public void receive(JWKSetSourceEvent<OutageTolerantJWKSetSource<SecurityContext>, SecurityContext> event) {
+				events.add((OutageTolerantJWKSetSource.OutageEvent<SecurityContext>) event);
+			}
+		};
+	
+	private OutageTolerantJWKSetSource<SecurityContext> source;
 
 	@Test
-	public void testShouldUseDelegate() throws Exception {
+	public void useDelegate() throws Exception {
+		source = new OutageTolerantJWKSetSource<>(wrappedJWKSetSource, TIME_TO_LIVE, null);
 		when(wrappedJWKSetSource.getJWKSet(eq(false), anyLong(), anySecurityContext())).thenReturn(jwkSet);
-		assertEquals(source.getJWKSet(false, System.currentTimeMillis(), context), jwkSet);
+		assertEquals(jwkSet, source.getJWKSet(false, System.currentTimeMillis(), context));
 	}
 
 	@Test
-	public void testShouldUseDelegateWhenCached() throws Exception {
+	public void useDelegate_withListener() throws Exception {
+		source = new OutageTolerantJWKSetSource<>(wrappedJWKSetSource, TIME_TO_LIVE, eventListener);
+		when(wrappedJWKSetSource.getJWKSet(eq(false), anyLong(), anySecurityContext())).thenReturn(jwkSet);
+		assertEquals(jwkSet, source.getJWKSet(false, System.currentTimeMillis(), context));
+		
+		assertTrue(events.isEmpty());
+	}
+
+	@Test
+	public void useDelegateWhenCached() throws Exception {
+		source = new OutageTolerantJWKSetSource<>(wrappedJWKSetSource, TIME_TO_LIVE, null);
+		
 		JWKSet last = new JWKSet(Arrays.asList(jwk, jwk));
 
 		when(wrappedJWKSetSource.getJWKSet(eq(false), anyLong(), anySecurityContext())).thenReturn(jwkSet).thenReturn(last);
-		assertEquals(source.getJWKSet(false, System.currentTimeMillis(), context), jwkSet);
-		assertEquals(source.getJWKSet(false, System.currentTimeMillis(), context), last);
+		assertEquals(jwkSet, source.getJWKSet(false, System.currentTimeMillis(), context));
+		assertEquals(last, source.getJWKSet(false, System.currentTimeMillis(), context));
 	}
 
 	@Test
-	public void testShouldUseCacheWhenDelegateSigningKeyUnavailable() throws Exception {
+	public void useDelegateWhenCached_withListener() throws Exception {
+		source = new OutageTolerantJWKSetSource<>(wrappedJWKSetSource, TIME_TO_LIVE, eventListener);
+		
+		JWKSet last = new JWKSet(Arrays.asList(jwk, jwk));
+
+		when(wrappedJWKSetSource.getJWKSet(eq(false), anyLong(), anySecurityContext())).thenReturn(jwkSet).thenReturn(last);
+		assertEquals(jwkSet, source.getJWKSet(false, System.currentTimeMillis(), context));
+		assertEquals(last, source.getJWKSet(false, System.currentTimeMillis(), context));
+		
+		assertTrue(events.isEmpty());
+	}
+
+	@Test
+	public void useCacheWhenDelegateSigningKeyUnavailable() throws Exception {
+		source = new OutageTolerantJWKSetSource<>(wrappedJWKSetSource, TIME_TO_LIVE, null);
 		when(wrappedJWKSetSource.getJWKSet(eq(false), anyLong(), anySecurityContext())).thenReturn(jwkSet).thenThrow(new JWKSetUnavailableException("TEST", null));
 		source.getJWKSet(false, System.currentTimeMillis(), context);
-		assertEquals(source.getJWKSet(false, System.currentTimeMillis(), context), jwkSet);
+		assertEquals(jwkSet, source.getJWKSet(false, System.currentTimeMillis(), context));
 		verify(wrappedJWKSetSource, times(2)).getJWKSet(eq(false), anyLong(), anySecurityContext());
 	}
 
 	@Test
-	public void testShouldNotUseExpiredCacheWhenDelegateSigningKeyUnavailable() throws Exception {
+	public void useCacheWhenDelegateSigningKeyUnavailable_withListener() throws Exception {
+		source = new OutageTolerantJWKSetSource<>(wrappedJWKSetSource, TIME_TO_LIVE, eventListener);
+		when(wrappedJWKSetSource.getJWKSet(eq(false), anyLong(), anySecurityContext())).thenReturn(jwkSet).thenThrow(new JWKSetUnavailableException("TEST", null));
+		source.getJWKSet(false, System.currentTimeMillis(), context);
+		assertTrue(events.isEmpty());
+		assertEquals(jwkSet, source.getJWKSet(false, System.currentTimeMillis(), context));
+		verify(wrappedJWKSetSource, times(2)).getJWKSet(eq(false), anyLong(), anySecurityContext());
+		assertEquals(1, events.size());
+		assertTrue(events.get(0).getRemainingTime() > 0L);
+	}
+
+	@Test
+	public void doNotUseExpiredCacheWhenDelegateSigningKeyUnavailable() throws Exception {
+		source = new OutageTolerantJWKSetSource<>(wrappedJWKSetSource, TIME_TO_LIVE, null);
 		when(wrappedJWKSetSource.getJWKSet(eq(false), anyLong(), anySecurityContext())).thenReturn(jwkSet).thenThrow(new JWKSetUnavailableException("TEST", null));
 		source.getJWKSet(false, System.currentTimeMillis(), context);
 
@@ -80,7 +127,23 @@ public class OutageTolerantJWKSetSourceTest extends AbstractWrappedJWKSetSourceT
 	}
 
 	@Test
-	public void testShouldGetBaseProvider() {
-		assertEquals(source.getSource(), wrappedJWKSetSource);
+	public void doNotUseExpiredCacheWhenDelegateSigningKeyUnavailable_withListener() throws Exception {
+		source = new OutageTolerantJWKSetSource<>(wrappedJWKSetSource, TIME_TO_LIVE, eventListener);
+		when(wrappedJWKSetSource.getJWKSet(eq(false), anyLong(), anySecurityContext())).thenReturn(jwkSet).thenThrow(new JWKSetUnavailableException("TEST", null));
+		source.getJWKSet(false, System.currentTimeMillis(), context);
+		assertTrue(events.isEmpty());
+		try {
+			source.getJWKSet(false, CachedObject.computeExpirationTime(System.currentTimeMillis() + 1, source.getTimeToLive()), context);
+			fail();
+		} catch(JWKSetUnavailableException e) {
+			assertEquals("TEST", e.getMessage());
+		}
+		assertTrue(events.isEmpty());
+	}
+
+	@Test
+	public void getBaseProvider() {
+		source = new OutageTolerantJWKSetSource<>(wrappedJWKSetSource, TIME_TO_LIVE, null);
+		assertEquals(wrappedJWKSetSource, source.getSource());
 	}
 }

@@ -19,6 +19,8 @@ package com.nimbusds.jose.jwk.source;
 
 
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -29,7 +31,6 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
-import org.junit.Before;
 import org.junit.Test;
 
 import com.nimbusds.jose.KeySourceException;
@@ -59,24 +60,44 @@ public class RefreshAheadCachingJWKSetSourceTest extends AbstractWrappedJWKSetSo
 	};
 
 	private static final String KID = "NkJCQzIyQzRBMEU4NjhGNUU4MzU4RkY0M0ZDQzkwOUQ0Q0VGNUMwQg";
+	private static final long TIME_TO_LIVE = 3600 * 1000 * 10;
+	private static final long REFRESH_TIMEOUT = 15_1000;
+	private static final long REFRESH_AHEAD_TIME = 10_000;
 	protected static final JWKSelector KID_SELECTOR = new JWKSelector(new JWKMatcher.Builder().keyID(KID).build());
+	
+	private final List<JWKSetSourceEvent<CachingJWKSetSource<SecurityContext>,SecurityContext>> events = new LinkedList<>();
+	
+	private final JWKSetSourceEventListener<CachingJWKSetSource<SecurityContext>,SecurityContext> eventListener =
+		new JWKSetSourceEventListener<CachingJWKSetSource<SecurityContext>, SecurityContext>() {
+			@Override
+			public void receive(JWKSetSourceEvent<CachingJWKSetSource<SecurityContext>, SecurityContext> event) {
+				events.add(event);
+			}
+		};
 
 	private RefreshAheadCachingJWKSetSource<SecurityContext> source;
 	
 	private JWKSetBasedJWKSource<SecurityContext> wrapper;
-
-	@Before
-	public void setUp() throws Exception {
-		super.setUp();
-
-		source = new RefreshAheadCachingJWKSetSource<>(wrappedJWKSetSource, 3600 * 1000 * 10, 15 * 1000, 10 * 1000, false);
-
+	
+	
+	private void setUp(final boolean withListener) {
+		
+		source = new RefreshAheadCachingJWKSetSource<>(
+			wrappedJWKSetSource,
+			TIME_TO_LIVE,
+			REFRESH_TIMEOUT,
+			REFRESH_AHEAD_TIME,
+			false,
+			withListener ? eventListener : null);
+		
 		wrapper = new JWKSetBasedJWKSource<>(source);
 	}
 	
 	
 	@Test
-	public void testRejectRefreshAheadTimePlusCacheRefreshTimeoutExceedingTimeToLive() {
+	public void rejectRefreshAheadTimePlusCacheRefreshTimeoutExceedingTimeToLive() {
+		
+		setUp(false);
 		
 		long timeToLive = 60_000;
 		long cacheRefreshTimeout = 10_000;
@@ -85,7 +106,7 @@ public class RefreshAheadCachingJWKSetSourceTest extends AbstractWrappedJWKSetSo
 		assertTrue(cacheRefreshTimeout + refreshAheadTime > timeToLive);
 		
 		try {
-			new RefreshAheadCachingJWKSetSource<>(wrappedJWKSetSource, timeToLive, cacheRefreshTimeout, refreshAheadTime, false);
+			new RefreshAheadCachingJWKSetSource<>(wrappedJWKSetSource, timeToLive, cacheRefreshTimeout, refreshAheadTime, false, null);
 			fail();
 		} catch (IllegalArgumentException e) {
 			assertEquals("The sum of the refresh-ahead time (50001ms) and the cache refresh timeout (10000ms) must not exceed the time-to-lived time (60000ms)", e.getMessage());
@@ -93,39 +114,107 @@ public class RefreshAheadCachingJWKSetSourceTest extends AbstractWrappedJWKSetSo
 	}
 
 	@Test
-	public void testShouldUseFallbackWhenNotCached() throws Exception {
-		when(wrappedJWKSetSource.getJWKSet(eq(false), anyLong(), anySecurityContext())).thenReturn(jwkSet);
-		assertEquals(source.getJWKSet(false, System.currentTimeMillis(), context), jwkSet);
+	public void notCached() throws Exception {
+		
+		for (boolean withListener: new boolean[]{false, true}) {
+		
+			setUp(withListener);
+			
+			when(wrappedJWKSetSource.getJWKSet(eq(false), anyLong(), anySecurityContext())).thenReturn(jwkSet);
+			assertEquals(jwkSet, source.getJWKSet(false, System.currentTimeMillis(), context));
+			
+			if (withListener) {
+				assertTrue(events.get(0) instanceof CachingJWKSetSource.RefreshInitiatedEvent);
+				assertTrue(events.get(1) instanceof CachingJWKSetSource.RefreshCompletedEvent);
+				assertEquals(2, events.size());
+			} else {
+				assertTrue(events.isEmpty());
+			}
+		}
 	}
 
 	@Test
-	public void testShouldUseCachedValue() throws Exception {
+	public void useCache() throws Exception {
+		
+		setUp(false);
+			
 		when(wrappedJWKSetSource.getJWKSet(eq(false), anyLong(), anySecurityContext())).thenReturn(jwkSet).thenThrow(new JWKSetUnavailableException("TEST!", null));
 		source.getJWKSet(false, System.currentTimeMillis(), context);
-		assertEquals(source.getJWKSet(false, System.currentTimeMillis(), context), jwkSet);
+		assertEquals(jwkSet, source.getJWKSet(false, System.currentTimeMillis(), context));
 		verify(wrappedJWKSetSource, only()).getJWKSet(eq(false), anyLong(), anySecurityContext());
 	}
 
 	@Test
-	public void testShouldUseFallbackWhenExpiredCache() throws Exception {
+	public void useCache_withListener() throws Exception {
+		
+		setUp(true);
+		
+		when(wrappedJWKSetSource.getJWKSet(eq(false), anyLong(), anySecurityContext())).thenReturn(jwkSet).thenThrow(new JWKSetUnavailableException("TEST!", null));
+		assertEquals(jwkSet, source.getJWKSet(false, System.currentTimeMillis(), context));
+		
+		assertTrue(events.get(0) instanceof CachingJWKSetSource.RefreshInitiatedEvent);
+		assertTrue(events.get(1) instanceof CachingJWKSetSource.RefreshCompletedEvent);
+		assertEquals(2, events.size());
+		
+		assertEquals(jwkSet, source.getJWKSet(false, System.currentTimeMillis(), context));
+		verify(wrappedJWKSetSource, only()).getJWKSet(eq(false), anyLong(), anySecurityContext());
+		
+		assertEquals(2, events.size());
+	}
+
+	@Test
+	public void expiredCache() throws Exception {
+		
+		setUp(false);
+		
 		JWKSet first = new JWKSet(jwk);
 		JWKSet second = new JWKSet(Arrays.asList(jwk, jwk));
 
 		when(wrappedJWKSetSource.getJWKSet(eq(false), anyLong(), anySecurityContext())).thenReturn(first).thenReturn(second);
 
 		// first
-		assertEquals(source.getJWKSet(false, System.currentTimeMillis(), context), first);
+		assertEquals(first, source.getJWKSet(false, System.currentTimeMillis(), context));
 		verify(wrappedJWKSetSource, only()).getJWKSet(eq(false), anyLong(), anySecurityContext());
 
 		// second
-		assertEquals(source.getJWKSet(false, CachedObject.computeExpirationTime(System.currentTimeMillis() + 1, source.getTimeToLive()), context), second);
+		assertEquals(second, source.getJWKSet(false, CachedObject.computeExpirationTime(System.currentTimeMillis() + 1, source.getTimeToLive()), context));
 		verify(wrappedJWKSetSource, times(2)).getJWKSet(eq(false), anyLong(), anySecurityContext());
 	}
 
 	@Test
-	public void testShouldNotReturnExpiredValueWhenExpiredCacheAndRefreshFails() throws Exception {
+	public void expiredCache_withListener() throws Exception {
+		
+		setUp(true);
+		
+		JWKSet first = new JWKSet(jwk);
+		JWKSet second = new JWKSet(Arrays.asList(jwk, jwk));
+
+		when(wrappedJWKSetSource.getJWKSet(eq(false), anyLong(), anySecurityContext())).thenReturn(first).thenReturn(second);
+
+		// first
+		assertEquals(first, source.getJWKSet(false, System.currentTimeMillis(), context));
+		verify(wrappedJWKSetSource, only()).getJWKSet(eq(false), anyLong(), anySecurityContext());
+		
+		assertTrue(events.get(0) instanceof CachingJWKSetSource.RefreshInitiatedEvent);
+		assertTrue(events.get(1) instanceof CachingJWKSetSource.RefreshCompletedEvent);
+		assertEquals(2, events.size());
+
+		// second
+		assertEquals(second, source.getJWKSet(false, CachedObject.computeExpirationTime(System.currentTimeMillis() + 1, source.getTimeToLive()), context));
+		verify(wrappedJWKSetSource, times(2)).getJWKSet(eq(false), anyLong(), anySecurityContext());
+		
+		assertTrue(events.get(0) instanceof CachingJWKSetSource.RefreshInitiatedEvent);
+		assertTrue(events.get(1) instanceof CachingJWKSetSource.RefreshCompletedEvent);
+		assertTrue(events.get(2) instanceof CachingJWKSetSource.RefreshInitiatedEvent);
+		assertTrue(events.get(3) instanceof CachingJWKSetSource.RefreshCompletedEvent);
+		assertEquals(4, events.size());
+	}
+
+	@Test
+	public void doNotReturnExpiredOnFailedRefresh() throws Exception {
+		setUp(false);
 		when(wrappedJWKSetSource.getJWKSet(eq(false), anyLong(), anySecurityContext())).thenReturn(jwkSet).thenThrow(new KeySourceException("TEST!", null));
-		assertEquals(source.getJWKSet(false, System.currentTimeMillis(), context), jwkSet);
+		assertEquals(jwkSet, source.getJWKSet(false, System.currentTimeMillis(), context));
 
 		try {
 			source.getJWKSet(false, CachedObject.computeExpirationTime(System.currentTimeMillis() + 1, source.getTimeToLive()), context);
@@ -136,19 +225,57 @@ public class RefreshAheadCachingJWKSetSourceTest extends AbstractWrappedJWKSetSo
 	}
 
 	@Test
-	public void testShouldGetBaseProvider() {
+	public void doNotReturnExpiredOnFailedRefresh_withListener() throws Exception {
+		setUp(true);
+		when(wrappedJWKSetSource.getJWKSet(eq(false), anyLong(), anySecurityContext())).thenReturn(jwkSet).thenThrow(new KeySourceException("TEST!", null));
+		assertEquals(jwkSet, source.getJWKSet(false, System.currentTimeMillis(), context));
+		
+		assertTrue(events.get(0) instanceof CachingJWKSetSource.RefreshInitiatedEvent);
+		assertTrue(events.get(1) instanceof CachingJWKSetSource.RefreshCompletedEvent);
+		assertEquals(2, events.size());
+
+		try {
+			source.getJWKSet(false, CachedObject.computeExpirationTime(System.currentTimeMillis() + 1, source.getTimeToLive()), context);
+			fail();
+		} catch(KeySourceException e) {
+			assertEquals("TEST!", e.getMessage());
+		}
+		
+		assertTrue(events.get(2) instanceof CachingJWKSetSource.RefreshInitiatedEvent);
+		assertEquals(3, events.size());
+	}
+
+	@Test
+	public void getWrappedSource() {
+		setUp(false);
 		assertThat(source.getSource(), equalTo(wrappedJWKSetSource));
 	}
 
 	@Test
-	public void testShouldUseCachedValueForKnownKey() throws Exception {
+	public void keyInCache() throws Exception {
+		setUp(false);
 		when(wrappedJWKSetSource.getJWKSet(eq(false), anyLong(), anySecurityContext())).thenReturn(jwkSet).thenThrow(new KeySourceException("TEST!", null));
-		assertEquals(wrapper.get(KID_SELECTOR, context), Arrays.asList(jwk));
+		assertEquals(Collections.singletonList(jwk), wrapper.get(KID_SELECTOR, context));
 		verify(wrappedJWKSetSource, only()).getJWKSet(eq(false), anyLong(), anySecurityContext());
 	}
 
 	@Test
-	public void testShouldRefreshCacheForUncachedKnownKey() throws Exception {
+	public void keyInCache_withListener() throws Exception {
+		setUp(true);
+		when(wrappedJWKSetSource.getJWKSet(eq(false), anyLong(), anySecurityContext())).thenReturn(jwkSet).thenThrow(new KeySourceException("TEST!", null));
+		assertEquals(Collections.singletonList(jwk), wrapper.get(KID_SELECTOR, context));
+		verify(wrappedJWKSetSource, only()).getJWKSet(eq(false), anyLong(), anySecurityContext());
+		
+		assertTrue(events.get(0) instanceof CachingJWKSetSource.RefreshInitiatedEvent);
+		assertTrue(events.get(1) instanceof CachingJWKSetSource.RefreshCompletedEvent);
+		assertEquals(2, events.size());
+	}
+
+	@Test
+	public void keyNotInCache() throws Exception {
+		
+		setUp(false);
+		
 		JWK a = mock(JWK.class);
 		when(a.getKeyID()).thenReturn("a");
 		JWK b = mock(JWK.class);
@@ -160,18 +287,21 @@ public class RefreshAheadCachingJWKSetSourceTest extends AbstractWrappedJWKSetSo
 		when(wrappedJWKSetSource.getJWKSet(eq(false), anyLong(), anySecurityContext())).thenReturn(first).thenReturn(second);
 
 		// first
-		assertEquals(wrapper.get(aSelector, context), first.getKeys());
+		assertEquals(first.getKeys(), wrapper.get(aSelector, context));
 		verify(wrappedJWKSetSource, only()).getJWKSet(eq(false), anyLong(), anySecurityContext());
 
 		Thread.sleep(1);
 		
 		// second
-		assertEquals(wrapper.get(bSelector, context), second.getKeys());
+		assertEquals(second.getKeys(), wrapper.get(bSelector, context));
 		verify(wrappedJWKSetSource, times(2)).getJWKSet(eq(false), anyLong(), anySecurityContext());
 	}
 
 	@Test
-	public void testShouldRefreshCacheAndReturnEmptyForUnknownKey() throws Exception {
+	public void keyNotInCache_withListener() throws Exception {
+		
+		setUp(true);
+		
 		JWK a = mock(JWK.class);
 		when(a.getKeyID()).thenReturn("a");
 		JWK b = mock(JWK.class);
@@ -183,7 +313,41 @@ public class RefreshAheadCachingJWKSetSourceTest extends AbstractWrappedJWKSetSo
 		when(wrappedJWKSetSource.getJWKSet(eq(false), anyLong(), anySecurityContext())).thenReturn(first).thenReturn(second);
 
 		// first
-		assertEquals(wrapper.get(aSelector, context), Arrays.asList(a));
+		assertEquals(first.getKeys(), wrapper.get(aSelector, context));
+		verify(wrappedJWKSetSource, only()).getJWKSet(eq(false), anyLong(), anySecurityContext());
+		
+		assertTrue(events.get(0) instanceof CachingJWKSetSource.RefreshInitiatedEvent);
+		assertTrue(events.get(1) instanceof CachingJWKSetSource.RefreshCompletedEvent);
+		assertEquals(2, events.size());
+
+		Thread.sleep(1);
+		
+		// second
+		assertEquals(second.getKeys(), wrapper.get(bSelector, context));
+		verify(wrappedJWKSetSource, times(2)).getJWKSet(eq(false), anyLong(), anySecurityContext());
+		
+		assertTrue(events.get(2) instanceof CachingJWKSetSource.RefreshInitiatedEvent);
+		assertTrue(events.get(3) instanceof CachingJWKSetSource.RefreshCompletedEvent);
+		assertEquals(4, events.size());
+	}
+
+	@Test
+	public void refreshCacheAndReturnEmptyForUnknownKey() throws Exception {
+		
+		setUp(false);
+		
+		JWK a = mock(JWK.class);
+		when(a.getKeyID()).thenReturn("a");
+		JWK b = mock(JWK.class);
+		when(b.getKeyID()).thenReturn("b");
+
+		JWKSet first = new JWKSet(a);
+		JWKSet second = new JWKSet(b);
+
+		when(wrappedJWKSetSource.getJWKSet(eq(false), anyLong(), anySecurityContext())).thenReturn(first).thenReturn(second);
+
+		// first
+		assertEquals(Collections.singletonList(a), wrapper.get(aSelector, context));
 		verify(wrappedJWKSetSource, only()).getJWKSet(eq(false), anyLong(), anySecurityContext());
 
 		// second
@@ -192,7 +356,44 @@ public class RefreshAheadCachingJWKSetSourceTest extends AbstractWrappedJWKSetSo
 	}
 
 	@Test
-	public void testShouldPreemptivelyRefreshCacheForKeys() throws Exception {
+	public void refreshCacheAndReturnEmptyForUnknownKey_withListener() throws Exception {
+		
+		setUp(true);
+		
+		JWK a = mock(JWK.class);
+		when(a.getKeyID()).thenReturn("a");
+		JWK b = mock(JWK.class);
+		when(b.getKeyID()).thenReturn("b");
+
+		JWKSet first = new JWKSet(a);
+		JWKSet second = new JWKSet(b);
+
+		when(wrappedJWKSetSource.getJWKSet(eq(false), anyLong(), anySecurityContext())).thenReturn(first).thenReturn(second);
+
+		// first
+		assertEquals(Collections.singletonList(a), wrapper.get(aSelector, context));
+		verify(wrappedJWKSetSource, only()).getJWKSet(eq(false), anyLong(), anySecurityContext());
+		
+		assertTrue(events.get(0) instanceof CachingJWKSetSource.RefreshInitiatedEvent);
+		assertTrue(events.get(1) instanceof CachingJWKSetSource.RefreshCompletedEvent);
+		assertEquals(2, events.size());
+
+		// second
+		List<JWK> list = wrapper.get(cSelector, context);
+		assertTrue(list.isEmpty());
+		
+		source.getExecutorService().awaitTermination(1, TimeUnit.SECONDS); // just to make sure
+		
+		assertTrue(events.get(2) instanceof CachingJWKSetSource.RefreshInitiatedEvent);
+		assertTrue(events.get(3) instanceof CachingJWKSetSource.RefreshCompletedEvent);
+		assertEquals(4, events.size());
+	}
+
+	@Test
+	public void refreshAhead() throws Exception {
+		
+		setUp(false);
+		
 		JWK a = mock(JWK.class);
 		when(a.getKeyID()).thenReturn("a");
 		JWK b = mock(JWK.class);
@@ -206,7 +407,7 @@ public class RefreshAheadCachingJWKSetSourceTest extends AbstractWrappedJWKSetSo
 		// first jwks
 		List<JWK> longBeforeExpiryKeys = wrapper.get(aSelector, context);
 		assertFalse(longBeforeExpiryKeys.isEmpty());
-		assertEquals(longBeforeExpiryKeys, first.getKeys());
+		assertEquals(first.getKeys(), longBeforeExpiryKeys);
 		verify(wrappedJWKSetSource, only()).getJWKSet(eq(false), anyLong(), anySecurityContext());
 
 		long justBeforeExpiry = CachedObject.computeExpirationTime(System.currentTimeMillis(), source.getTimeToLive()) - TimeUnit.SECONDS.toMillis(5);
@@ -214,19 +415,71 @@ public class RefreshAheadCachingJWKSetSourceTest extends AbstractWrappedJWKSetSo
 
 		JWKSet justBeforeExpiryKeys = source.getJWKSet(false, justBeforeExpiry, context);
 		assertFalse(justBeforeExpiryKeys.isEmpty());
-		assertEquals(justBeforeExpiryKeys.getKeys(), first.getKeys()); // triggers a preemptive refresh attempt
+		assertEquals(first.getKeys(), justBeforeExpiryKeys.getKeys()); // triggers a refresh ahead of expiration
 
 		source.getExecutorService().awaitTermination(1, TimeUnit.SECONDS);
 		verify(wrappedJWKSetSource, times(2)).getJWKSet(eq(false), anyLong(), anySecurityContext());
 
 		// second jwks
-		assertEquals(wrapper.get(bSelector, context), second.getKeys()); // should already be in cache
+		assertEquals( second.getKeys(), wrapper.get(bSelector, context)); // should already be in cache
 		source.getExecutorService().awaitTermination(1, TimeUnit.SECONDS); // just to make sure
 		verify(wrappedJWKSetSource, times(2)).getJWKSet(eq(false), anyLong(), anySecurityContext());
 	}
 
 	@Test
-	public void testShouldNotPreemptivelyRefreshCacheIfRefreshAlreadyInProgress() throws Exception {
+	public void refreshAhead_withListener() throws Exception {
+		
+		setUp(true);
+		
+		JWK a = mock(JWK.class);
+		when(a.getKeyID()).thenReturn("a");
+		JWK b = mock(JWK.class);
+		when(b.getKeyID()).thenReturn("b");
+
+		JWKSet first = new JWKSet(a);
+		JWKSet second = new JWKSet(b);
+
+		when(wrappedJWKSetSource.getJWKSet(eq(false), anyLong(), anySecurityContext())).thenReturn(first).thenReturn(second);
+
+		// first jwks
+		List<JWK> longBeforeExpiryKeys = wrapper.get(aSelector, context);
+		assertFalse(longBeforeExpiryKeys.isEmpty());
+		assertEquals(first.getKeys(), longBeforeExpiryKeys);
+		verify(wrappedJWKSetSource, only()).getJWKSet(eq(false), anyLong(), anySecurityContext());
+		
+		assertTrue(events.get(0) instanceof CachingJWKSetSource.RefreshInitiatedEvent);
+		assertTrue(events.get(1) instanceof CachingJWKSetSource.RefreshCompletedEvent);
+		assertEquals(2, events.size());
+
+		long justBeforeExpiry = CachedObject.computeExpirationTime(System.currentTimeMillis(), source.getTimeToLive()) - TimeUnit.SECONDS.toMillis(5);
+		verify(wrappedJWKSetSource, only()).getJWKSet(eq(false), anyLong(), anySecurityContext());
+
+		JWKSet justBeforeExpiryKeys = source.getJWKSet(false, justBeforeExpiry, context);
+		assertFalse(justBeforeExpiryKeys.isEmpty());
+		assertEquals(first.getKeys(), justBeforeExpiryKeys.getKeys()); // triggers a refresh ahead of expiration
+
+		source.getExecutorService().awaitTermination(1, TimeUnit.SECONDS);
+		verify(wrappedJWKSetSource, times(2)).getJWKSet(eq(false), anyLong(), anySecurityContext());
+		
+		assertTrue(events.get(2) instanceof RefreshAheadCachingJWKSetSource.ScheduledRefreshInitiatedEvent);
+		assertTrue(events.get(3) instanceof CachingJWKSetSource.RefreshInitiatedEvent);
+		assertTrue(events.get(4) instanceof CachingJWKSetSource.RefreshCompletedEvent);
+		assertTrue(events.get(5) instanceof RefreshAheadCachingJWKSetSource.ScheduledRefreshCompletedEvent);
+		assertEquals(6, events.size());
+
+		// second jwks
+		assertEquals( second.getKeys(), wrapper.get(bSelector, context)); // should already be in cache
+		source.getExecutorService().awaitTermination(1, TimeUnit.SECONDS); // just to make sure
+		verify(wrappedJWKSetSource, times(2)).getJWKSet(eq(false), anyLong(), anySecurityContext());
+		
+		assertEquals(6, events.size());
+	}
+
+	@Test
+	public void noRefreshAheadIfAnotherInProgress() throws Exception {
+		
+		setUp(false);
+		
 		JWK a = mock(JWK.class);
 		when(a.getKeyID()).thenReturn("a");
 		JWK b = mock(JWK.class);
@@ -245,22 +498,74 @@ public class RefreshAheadCachingJWKSetSourceTest extends AbstractWrappedJWKSetSo
 
 		long justBeforeExpiry = CachedObject.computeExpirationTime(System.currentTimeMillis(), source.getTimeToLive()) - TimeUnit.SECONDS.toMillis(5);
 
-		assertEquals(source.getJWKSet(false, justBeforeExpiry, context), first); // triggers a preemptive refresh attempt
+		assertEquals(first, source.getJWKSet(false, justBeforeExpiry, context)); // triggers a scheduled refresh attempt
 
 		source.getExecutorService().awaitTermination(1, TimeUnit.SECONDS);
 
-		source.refreshAheadOfExpiration(cache, false, justBeforeExpiry, context); // should not trigger a preemptive refresh attempt
+		source.refreshAheadOfExpiration(cache, false, justBeforeExpiry, context); // must not trigger a scheduled refresh attempt
 
 		verify(wrappedJWKSetSource, times(2)).getJWKSet(eq(false), anyLong(), anySecurityContext());
 
 		// second jwks
-		assertEquals(wrapper.get(bSelector, null), second.getKeys()); // should already be in cache
+		assertEquals(second.getKeys(), wrapper.get(bSelector, null)); // should already be in cache
 		source.getExecutorService().awaitTermination(1, TimeUnit.SECONDS); // just to make sure
 		verify(wrappedJWKSetSource, times(2)).getJWKSet(eq(false), anyLong(), anySecurityContext());
 	}
 
 	@Test
-	public void testShouldFirePreemptivelyRefreshCacheAgainIfPreviousPreemptivelyRefreshAttemptFailed() throws Exception {
+	public void noRefreshAheadIfAnotherInProgress_withListener() throws Exception {
+		
+		setUp(true);
+		
+		JWK a = mock(JWK.class);
+		when(a.getKeyID()).thenReturn("a");
+		JWK b = mock(JWK.class);
+		when(b.getKeyID()).thenReturn("b");
+
+		JWKSet first = new JWKSet(a);
+		JWKSet second = new JWKSet(b);
+
+		when(wrappedJWKSetSource.getJWKSet(eq(false), anyLong(), anySecurityContext())).thenReturn(first).thenReturn(second);
+
+		// first jwks
+		assertEquals(wrapper.get(aSelector, context), first.getKeys());
+		verify(wrappedJWKSetSource, only()).getJWKSet(eq(false), anyLong(), anySecurityContext());
+		
+		assertTrue(events.get(0) instanceof CachingJWKSetSource.RefreshInitiatedEvent);
+		assertTrue(events.get(1) instanceof CachingJWKSetSource.RefreshCompletedEvent);
+		assertEquals(2, events.size());
+
+		CachedObject<JWKSet> cache = source.getCachedJWKSetIfValid(System.currentTimeMillis());
+
+		long justBeforeExpiry = CachedObject.computeExpirationTime(System.currentTimeMillis(), source.getTimeToLive()) - TimeUnit.SECONDS.toMillis(5);
+
+		assertEquals(first, source.getJWKSet(false, justBeforeExpiry, context)); // triggers a scheduled refresh attempt
+
+		source.getExecutorService().awaitTermination(1, TimeUnit.SECONDS);
+		
+		assertTrue(events.get(2) instanceof RefreshAheadCachingJWKSetSource.ScheduledRefreshInitiatedEvent);
+		assertTrue(events.get(3) instanceof CachingJWKSetSource.RefreshInitiatedEvent);
+		assertTrue(events.get(4) instanceof CachingJWKSetSource.RefreshCompletedEvent);
+		assertTrue(events.get(5) instanceof RefreshAheadCachingJWKSetSource.ScheduledRefreshCompletedEvent);
+		assertEquals(6, events.size());
+		
+		source.refreshAheadOfExpiration(cache, false, justBeforeExpiry, context); // must not trigger a scheduled refresh attempt
+
+		verify(wrappedJWKSetSource, times(2)).getJWKSet(eq(false), anyLong(), anySecurityContext());
+
+		// second jwks
+		assertEquals(second.getKeys(), wrapper.get(bSelector, null)); // should already be in cache
+		source.getExecutorService().awaitTermination(1, TimeUnit.SECONDS); // just to make sure
+		verify(wrappedJWKSetSource, times(2)).getJWKSet(eq(false), anyLong(), anySecurityContext());
+		
+		assertEquals(6, events.size());
+	}
+
+	@Test
+	public void repeatRefreshAheadIfPreviousFailed() throws Exception {
+		
+		setUp(false);
+		
 		JWK a = mock(JWK.class);
 		when(a.getKeyID()).thenReturn("a");
 		JWK b = mock(JWK.class);
@@ -272,40 +577,97 @@ public class RefreshAheadCachingJWKSetSourceTest extends AbstractWrappedJWKSetSo
 		when(wrappedJWKSetSource.getJWKSet(eq(false), anyLong(), anySecurityContext())).thenReturn(first).thenThrow(new JWKSetUnavailableException("TEST!")).thenReturn(second);
 
 		// first jwks
-		assertEquals(wrapper.get(aSelector, context), first.getKeys());
+		assertEquals(first.getKeys(), wrapper.get(aSelector, context));
 		verify(wrappedJWKSetSource, only()).getJWKSet(eq(false), anyLong(), anySecurityContext());
 
 		long justBeforeExpiry = CachedObject.computeExpirationTime(System.currentTimeMillis(), source.getTimeToLive()) - TimeUnit.SECONDS.toMillis(5);
 
-		assertEquals(source.getJWKSet(false, justBeforeExpiry, context), first); // triggers a preemptive refresh attempt
+		assertEquals(first, source.getJWKSet(false, justBeforeExpiry, context)); // triggers a scheduled refresh attempt
 
 		source.getExecutorService().awaitTermination(1, TimeUnit.SECONDS);
 
-		assertEquals(source.getJWKSet(false, justBeforeExpiry, context), first); // triggers a another preemptive refresh attempt
+		assertEquals(first, source.getJWKSet(false, justBeforeExpiry, context)); // triggers another scheduled refresh attempt
 
 		source.getExecutorService().awaitTermination(1, TimeUnit.SECONDS);
 
 		verify(wrappedJWKSetSource, times(3)).getJWKSet(eq(false), anyLong(), anySecurityContext());
 
 		// second jwks
-		assertEquals(wrapper.get(bSelector, context), second.getKeys()); // should already be in cache
+		assertEquals(second.getKeys(), wrapper.get(bSelector, context)); // should already be in cache
 		source.getExecutorService().awaitTermination(1, TimeUnit.SECONDS); // just to make sure
 		verify(wrappedJWKSetSource, times(3)).getJWKSet(eq(false), anyLong(), anySecurityContext());
 	}
 
 	@Test
-	public void testShouldAcceptIfAnotherThreadPreemptivelyUpdatesCache() throws Exception {
-		when(wrappedJWKSetSource.getJWKSet(eq(false), anyLong(), anySecurityContext())).thenReturn(jwkSet);
+	public void repeatRefreshAheadIfPreviousFailed_withListener() throws Exception {
+		
+		setUp(true);
+		
+		JWK a = mock(JWK.class);
+		when(a.getKeyID()).thenReturn("a");
+		JWK b = mock(JWK.class);
+		when(b.getKeyID()).thenReturn("b");
 
-		source.getJWKSet(false, System.currentTimeMillis(), context);
+		JWKSet first = new JWKSet(a);
+		JWKSet second = new JWKSet(b);
+
+		when(wrappedJWKSetSource.getJWKSet(eq(false), anyLong(), anySecurityContext())).thenReturn(first).thenThrow(new JWKSetUnavailableException("TEST!")).thenReturn(second);
+
+		// first jwks
+		assertEquals(first.getKeys(), wrapper.get(aSelector, context));
+		verify(wrappedJWKSetSource, only()).getJWKSet(eq(false), anyLong(), anySecurityContext());
+		
+		assertTrue(events.get(0) instanceof CachingJWKSetSource.RefreshInitiatedEvent);
+		assertTrue(events.get(1) instanceof CachingJWKSetSource.RefreshCompletedEvent);
+		assertEquals(2, events.size());
+
+		long justBeforeExpiry = CachedObject.computeExpirationTime(System.currentTimeMillis(), source.getTimeToLive()) - TimeUnit.SECONDS.toMillis(5);
+
+		assertEquals(first, source.getJWKSet(false, justBeforeExpiry, context)); // triggers a scheduled refresh attempt
+
+		source.getExecutorService().awaitTermination(1, TimeUnit.SECONDS);
+		
+		assertTrue(events.get(2) instanceof RefreshAheadCachingJWKSetSource.ScheduledRefreshInitiatedEvent);
+		assertTrue(events.get(3) instanceof CachingJWKSetSource.RefreshInitiatedEvent);
+		assertTrue(events.get(4) instanceof RefreshAheadCachingJWKSetSource.UnableToRefreshAheadOfExpirationEvent);
+		assertEquals(5, events.size());
+
+		assertEquals(first, source.getJWKSet(false, justBeforeExpiry, context)); // triggers another scheduled refresh attempt
+
+		source.getExecutorService().awaitTermination(1, TimeUnit.SECONDS);
+
+		verify(wrappedJWKSetSource, times(3)).getJWKSet(eq(false), anyLong(), anySecurityContext());
+		
+		assertTrue(events.get(5) instanceof RefreshAheadCachingJWKSetSource.ScheduledRefreshInitiatedEvent);
+		assertTrue(events.get(6) instanceof CachingJWKSetSource.RefreshInitiatedEvent);
+		assertTrue(events.get(7) instanceof CachingJWKSetSource.RefreshCompletedEvent);
+		assertTrue(events.get(8) instanceof RefreshAheadCachingJWKSetSource.ScheduledRefreshCompletedEvent);
+		assertEquals(9, events.size());
+
+		// second jwks
+		assertEquals(second.getKeys(), wrapper.get(bSelector, context)); // must be in cache
+		source.getExecutorService().awaitTermination(1, TimeUnit.SECONDS); // just to make sure
+		verify(wrappedJWKSetSource, times(3)).getJWKSet(eq(false), anyLong(), anySecurityContext());
+		
+		assertEquals(9, events.size());
+	}
+
+	@Test
+	public void acceptRefreshAheadOnAnotherThread() throws Exception {
+		
+		setUp(false);
+		
+		when(wrappedJWKSetSource.getJWKSet(eq(false), anyLong(), anySecurityContext())).thenReturn(jwkSet);
+		
+		assertEquals(jwkSet, source.getJWKSet(false, System.currentTimeMillis(), context));
 
 		long justBeforeExpiry = CachedObject.computeExpirationTime(System.currentTimeMillis(), source.getTimeToLive()) - TimeUnit.SECONDS.toMillis(5);
 
 		ThreadHelper helper = new ThreadHelper().addRun(lockRunnable).addPause().addRun(unlockRunnable);
 		try {
 			helper.begin();
-
-			source.getJWKSet(false, justBeforeExpiry, context); // wants to update, but can't get lock
+			
+			assertEquals(jwkSet, source.getJWKSet(false, justBeforeExpiry, context)); // wants to update, but can't get lock
 
 			verify(wrappedJWKSetSource, only()).getJWKSet(eq(false), anyLong(), anySecurityContext());
 		} finally {
@@ -314,52 +676,78 @@ public class RefreshAheadCachingJWKSetSourceTest extends AbstractWrappedJWKSetSo
 	}
 
 	@Test
-	public void testShouldSchedulePreemptivelyRefreshCacheForKeys() throws Exception {
+	public void acceptRefreshAheadOnAnotherThread_withListener() throws Exception {
+		
+		setUp(true);
+		
+		when(wrappedJWKSetSource.getJWKSet(eq(false), anyLong(), anySecurityContext())).thenReturn(jwkSet);
+
+		assertEquals(jwkSet, source.getJWKSet(false, System.currentTimeMillis(), context));
+		
+		assertTrue(events.get(0) instanceof CachingJWKSetSource.RefreshInitiatedEvent);
+		assertTrue(events.get(1) instanceof CachingJWKSetSource.RefreshCompletedEvent);
+		assertEquals(2, events.size());
+
+		long justBeforeExpiry = CachedObject.computeExpirationTime(System.currentTimeMillis(), source.getTimeToLive()) - TimeUnit.SECONDS.toMillis(5);
+
+		ThreadHelper helper = new ThreadHelper().addRun(lockRunnable).addPause().addRun(unlockRunnable);
+		try {
+			helper.begin();
+
+			assertEquals(jwkSet, source.getJWKSet(false, justBeforeExpiry, context)); // wants to update, but can't get lock
+
+			verify(wrappedJWKSetSource, only()).getJWKSet(eq(false), anyLong(), anySecurityContext());
+		} finally {
+			helper.close();
+		}
+		
+		assertEquals(2, events.size());
+	}
+
+	@Test
+	public void scheduleRefreshAhead() throws Exception {
 		long timeToLive = 1000; 
 		long refreshTimeout = 150;
 		long preemptiveRefresh = 300;
 
-		RefreshAheadCachingJWKSetSource<SecurityContext> provider = new RefreshAheadCachingJWKSetSource<>(wrappedJWKSetSource, timeToLive, refreshTimeout, preemptiveRefresh, true);
-		JWKSetBasedJWKSource<SecurityContext> wrapper = new JWKSetBasedJWKSource<>(provider);
-
-		try {
+		RefreshAheadCachingJWKSetSource<SecurityContext> source = new RefreshAheadCachingJWKSetSource<>(wrappedJWKSetSource, timeToLive, refreshTimeout, preemptiveRefresh, true, null);
+		
+		try (JWKSetBasedJWKSource<SecurityContext> wrapper = new JWKSetBasedJWKSource<>(source)) {
 			JWK a = mock(JWK.class);
 			when(a.getKeyID()).thenReturn("a");
 			JWK b = mock(JWK.class);
 			when(b.getKeyID()).thenReturn("b");
-	
+			
 			JWKSet first = new JWKSet(a);
 			JWKSet second = new JWKSet(b);
-	
+			
 			when(wrappedJWKSetSource.getJWKSet(eq(false), anyLong(), anySecurityContext())).thenReturn(first).thenReturn(second);
-	
+			
 			long time = System.currentTimeMillis();
 			
 			// first jwks
-			assertEquals(wrapper.get(aSelector, context), first.getKeys());
+			assertEquals(first.getKeys(), wrapper.get(aSelector, context));
 			verify(wrappedJWKSetSource, only()).getJWKSet(eq(false), anyLong(), anySecurityContext());
-	
-			ScheduledFuture<?> eagerJwkListCacheItem = provider.getScheduledRefreshFuture();
+			
+			ScheduledFuture<?> eagerJwkListCacheItem = source.getScheduledRefreshFuture();
 			assertNotNull(eagerJwkListCacheItem);
 			
 			long left = eagerJwkListCacheItem.getDelay(TimeUnit.MILLISECONDS);
 			
 			long skew = System.currentTimeMillis() - time;
-	
+			
 			assertTrue(left <= timeToLive - refreshTimeout - preemptiveRefresh);
 			assertTrue(left >= timeToLive - refreshTimeout - preemptiveRefresh - skew - 1);
-	
+			
 			// sleep and check that keys were actually updated
 			Thread.sleep(left + Math.min(25, 4 * skew));
 			
-			provider.getExecutorService().awaitTermination(Math.min(25, 4 * skew), TimeUnit.MILLISECONDS);
+			source.getExecutorService().awaitTermination(Math.min(25, 4 * skew), TimeUnit.MILLISECONDS);
 			verify(wrappedJWKSetSource, times(2)).getJWKSet(eq(false), anyLong(), anySecurityContext());
 			
 			// no new update necessary
-			assertEquals(wrapper.get(bSelector, context), second.getKeys());
+			assertEquals(second.getKeys(), wrapper.get(bSelector, context));
 			verify(wrappedJWKSetSource, times(2)).getJWKSet(eq(false), anyLong(), anySecurityContext());
-		} finally {
-			wrapper.close();
 		}
 	}
 }

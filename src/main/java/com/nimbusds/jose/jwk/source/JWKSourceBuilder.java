@@ -45,7 +45,7 @@ import com.nimbusds.jose.util.health.HealthReportListener;
  *
  * @author Thomas Rørvik Skjølberg
  * @author Vladimir Dzhuvinov
- * @version 2022-08-25
+ * @version 2022-08-28
  */
 public class JWKSourceBuilder<C extends SecurityContext> {
 	
@@ -413,7 +413,7 @@ public class JWKSourceBuilder<C extends SecurityContext> {
 					outageCacheTimeToLive = DEFAULT_CACHE_TIME_TO_LIVE * 10;
 				}
 			}
-			source = new OutageTolerantJWKSetSource<>(source, outageCacheTimeToLive);
+			source = new OutageTolerantJWKSetSource<>(source, outageCacheTimeToLive, null);
 		}
 
 		if (healthReportListener != null) {
@@ -425,9 +425,9 @@ public class JWKSourceBuilder<C extends SecurityContext> {
 		}
 		
 		if (refreshAhead) {
-			source = new RefreshAheadCachingJWKSetSource<>(source, cacheTimeToLive, cacheRefreshTimeout, refreshAheadTime, refreshAheadScheduled);
+			source = new RefreshAheadCachingJWKSetSource<>(source, cacheTimeToLive, cacheRefreshTimeout, refreshAheadTime, refreshAheadScheduled, null);
 		} else if (caching) {
-			source = new CachingJWKSetSource<>(source, cacheTimeToLive, cacheRefreshTimeout);
+			source = new CachingJWKSetSource<>(source, cacheTimeToLive, cacheRefreshTimeout, null);
 		}
 
 		JWKSource<C> jwkSource = new JWKSetBasedJWKSource<>(source);

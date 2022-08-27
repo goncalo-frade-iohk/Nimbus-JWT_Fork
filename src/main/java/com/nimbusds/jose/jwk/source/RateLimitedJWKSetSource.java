@@ -29,21 +29,33 @@ import com.nimbusds.jose.proc.SecurityContext;
  * period. Intended to guard against frequent, potentially costly, downstream
  * calls.
  *
- * <b>Two invocations per time period are allowed, so that, under normal
+ * <p>Two invocations per time period are allowed, so that, under normal
  * operation, there is always one invocation left in case the keys are rotated
  * and this results in triggering a refresh of the JWK set. The other request
  * is (sometimes) consumed by background refreshes.
  *
  * @author Thomas Rørvik Skjølberg
  * @author Vladimir Dzhuvinov
- * @version 2022-08-25
+ * @version 2022-08-28
  */
 @ThreadSafe
 public class RateLimitedJWKSetSource<C extends SecurityContext> extends JWKSetSourceWrapper<C> {
 	
+	/**
+	 * Rate limited event.
+	 */
+	public static class RateLimitedEvent<C extends SecurityContext> extends AbstractJWKSetSourceEvent<RateLimitedJWKSetSource<C>, C> {
+		
+		private RateLimitedEvent(final RateLimitedJWKSetSource<C> source, final C securityContext) {
+			super(source, securityContext);
+		}
+	}
+	
+	
 	private final long minTimeInterval;
 	private long nextOpeningTime = -1L;
 	private int counter = 0;
+	private final JWKSetSourceEventListener<RateLimitedJWKSetSource<C>, C> eventListener;
 
 	
 	/**
@@ -55,8 +67,26 @@ public class RateLimitedJWKSetSource<C extends SecurityContext> extends JWKSetSo
 	 *                        JWK set retrievals, in milliseconds.
 	 */
 	public RateLimitedJWKSetSource(final JWKSetSource<C> source, final long minTimeInterval) {
+		this(source, minTimeInterval, null);
+	}
+
+	
+	/**
+	 * Creates a new JWK set source that limits the number of requests.
+	 *
+	 * @param source          The JWK set source to decorate. Must not be
+	 *                        {@code null}.
+	 * @param minTimeInterval The minimum allowed time interval between two
+	 *                        JWK set retrievals, in milliseconds.
+	 * @param eventListener   The event listener, {@code null} if not
+	 *                        specified.
+	 */
+	public RateLimitedJWKSetSource(final JWKSetSource<C> source,
+				       final long minTimeInterval,
+				       final JWKSetSourceEventListener<RateLimitedJWKSetSource<C>, C> eventListener) {
 		super(source);
 		this.minTimeInterval = minTimeInterval;
+		this.eventListener = eventListener;
 	}
 	
 	
@@ -81,6 +111,9 @@ public class RateLimitedJWKSetSource<C extends SecurityContext> extends JWKSetSo
 			}
 		}
 		if (rateLimitHit) {
+			if (eventListener != null) {
+				eventListener.receive(new RateLimitedEvent<>(this, context));
+			}
 			throw new RateLimitReachedException();
 		}
 		return getSource().getJWKSet(forceReload, currentTime, context);

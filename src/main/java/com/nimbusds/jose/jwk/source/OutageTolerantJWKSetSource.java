@@ -35,22 +35,54 @@ import com.nimbusds.jose.util.cache.CachedObject;
  *
  * @author Thomas Rørvik Skjølberg
  * @author Vladimir Dzhuvinov
- * @version 2022-08-24
+ * @version 2022-08-28
  */
 @ThreadSafe
 public class OutageTolerantJWKSetSource<C extends SecurityContext> extends AbstractCachingJWKSetSource<C> {
 	
 	
 	/**
+	 * JWK set source outage event.
+	 */
+	public static class OutageEvent<C extends SecurityContext> extends AbstractJWKSetSourceEvent<OutageTolerantJWKSetSource<C>, C> {
+		
+		private final long remainingTime;
+		
+		private OutageEvent(final OutageTolerantJWKSetSource<C> source, final long remainingTime, final C context) {
+			super(source, context);
+			this.remainingTime = remainingTime;
+		}
+		
+		
+		/**
+		 * Returns the remaining time until the outage cache expires.
+		 *
+		 * @return The remaining time, in milliseconds.
+		 */
+		public long getRemainingTime() {
+			return remainingTime;
+		}
+	}
+	
+	
+	private final JWKSetSourceEventListener<OutageTolerantJWKSetSource<C>, C> eventListener;
+	
+	
+	/**
 	 * Creates a new outage tolerant JWK set source.
 	 *
-	 * @param source     The JWK set source to decorate. Must not be
-	 *                   {@code null}.
-	 * @param timeToLive The time to live of the cached JWK set to cover
-	 *                   outages, in milliseconds.
+	 * @param source        The JWK set source to decorate. Must not be
+	 *                      {@code null}.
+	 * @param timeToLive    The time to live of the cached JWK set to cover
+	 *                      outages, in milliseconds.
+	 * @param eventListener The event listener, {@code null} if not
+	 *                      specified.
 	 */
-	public OutageTolerantJWKSetSource(final JWKSetSource<C> source, final long timeToLive) {
+	public OutageTolerantJWKSetSource(final JWKSetSource<C> source,
+					  final long timeToLive,
+					  final JWKSetSourceEventListener<OutageTolerantJWKSetSource<C>,C> eventListener) {
 		super(source, timeToLive);
+		this.eventListener = eventListener;
 	}
 
 	
@@ -67,6 +99,10 @@ public class OutageTolerantJWKSetSource<C extends SecurityContext> extends Abstr
 				// return the previously cached JWT set
 				CachedObject<JWKSet> cache = getCachedJWKSet();
 				if (cache != null && cache.isValid(currentTime)) {
+					long remainingTime = cache.getExpirationTime() - currentTime; // in millis
+					if (eventListener != null) {
+						eventListener.receive(new OutageEvent<>(this, remainingTime, context));
+					}
 					return cache.get();
 				}
 			}

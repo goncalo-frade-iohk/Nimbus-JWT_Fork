@@ -24,6 +24,7 @@ import net.jcip.annotations.ThreadSafe;
 import com.nimbusds.jose.KeySourceException;
 import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.proc.SecurityContext;
+import com.nimbusds.jose.util.events.EventListener;
 
 
 /**
@@ -65,7 +66,7 @@ public class RetryingJWKSetSource<C extends SecurityContext> extends JWKSetSourc
 	}
 	
 	
-	private final JWKSetSourceEventListener<RetryingJWKSetSource<C>, C> eventListener;
+	private final EventListener<RetryingJWKSetSource<C>, C> eventListener;
 	
 	
 	/**
@@ -77,7 +78,7 @@ public class RetryingJWKSetSource<C extends SecurityContext> extends JWKSetSourc
 	 *                      specified.
 	 */
 	public RetryingJWKSetSource(final JWKSetSource<C> source,
-				    final JWKSetSourceEventListener<RetryingJWKSetSource<C>, C> eventListener) {
+				    final EventListener<RetryingJWKSetSource<C>, C> eventListener) {
 		super(source);
 		this.eventListener = eventListener;
 	}
@@ -93,7 +94,7 @@ public class RetryingJWKSetSource<C extends SecurityContext> extends JWKSetSourc
 		} catch (JWKSetUnavailableException e) {
 			// assume transient network issue, retry once
 			if (eventListener != null) {
-				eventListener.receive(new RetrialEvent<C>(this, e, context));
+				eventListener.notify(new RetrialEvent<C>(this, e, context));
 			}
 			return getSource().getJWKSet(forceReload, currentTime, context);
 		}

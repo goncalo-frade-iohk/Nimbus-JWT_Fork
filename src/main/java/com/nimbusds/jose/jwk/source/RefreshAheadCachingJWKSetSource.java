@@ -29,6 +29,7 @@ import com.nimbusds.jose.KeySourceException;
 import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.proc.SecurityContext;
 import com.nimbusds.jose.util.cache.CachedObject;
+import com.nimbusds.jose.util.events.EventListener;
 
 
 /**
@@ -159,7 +160,7 @@ public class RefreshAheadCachingJWKSetSource<C extends SecurityContext> extends 
 	
 	private ScheduledFuture<?> scheduledRefreshFuture;
 	
-	private final JWKSetSourceEventListener<CachingJWKSetSource<C>, C> eventListener;
+	private final EventListener<CachingJWKSetSource<C>, C> eventListener;
 
 	
 	/**
@@ -182,7 +183,7 @@ public class RefreshAheadCachingJWKSetSource<C extends SecurityContext> extends 
 					       final long cacheRefreshTimeout,
 					       final long refreshAheadTime,
 					       final boolean scheduled,
-					       final JWKSetSourceEventListener<CachingJWKSetSource<C>, C> eventListener) {
+					       final EventListener<CachingJWKSetSource<C>, C> eventListener) {
 		
 		this(source, timeToLive, cacheRefreshTimeout, refreshAheadTime,
 			scheduled, Executors.newSingleThreadExecutor(), true,
@@ -220,7 +221,7 @@ public class RefreshAheadCachingJWKSetSource<C extends SecurityContext> extends 
 					       final boolean scheduled,
 					       final ExecutorService executorService,
 					       final boolean shutdownExecutorOnClose,
-					       final JWKSetSourceEventListener<CachingJWKSetSource<C>, C> eventListener) {
+					       final EventListener<CachingJWKSetSource<C>, C> eventListener) {
 		
 		super(source, timeToLive, cacheRefreshTimeout, eventListener);
 
@@ -295,7 +296,7 @@ public class RefreshAheadCachingJWKSetSource<C extends SecurityContext> extends 
 						refreshAheadOfExpiration(cache, true, System.currentTimeMillis(), context);
 					} catch (Exception e) {
 						if (eventListener != null) {
-							eventListener.receive(new ScheduledRefreshFailed<C>(that, e, context));
+							eventListener.notify(new ScheduledRefreshFailed<C>(that, e, context));
 						}
 						// ignore
 					}
@@ -304,12 +305,12 @@ public class RefreshAheadCachingJWKSetSource<C extends SecurityContext> extends 
 			this.scheduledRefreshFuture = scheduledExecutorService.schedule(command, delay, TimeUnit.MILLISECONDS);
 			
 			if (eventListener != null) {
-				eventListener.receive(new RefreshScheduledEvent<C>(this, context));
+				eventListener.notify(new RefreshScheduledEvent<C>(this, context));
 			}
 		} else {
 			// cache refresh not scheduled
 			if (eventListener != null) {
-				eventListener.receive(new RefreshNotScheduledEvent<C>(this, context));
+				eventListener.notify(new RefreshNotScheduledEvent<C>(this, context));
 			}
 		}
 	}
@@ -366,13 +367,13 @@ public class RefreshAheadCachingJWKSetSource<C extends SecurityContext> extends 
 				public void run() {
 					try {
 						if (eventListener != null) {
-							eventListener.receive(new ScheduledRefreshInitiatedEvent<>(that, context));
+							eventListener.notify(new ScheduledRefreshInitiatedEvent<>(that, context));
 						}
 						
 						JWKSet jwkSet = RefreshAheadCachingJWKSetSource.this.loadJWKSetBlocking(currentTime, context);
 						
 						if (eventListener != null) {
-							eventListener.receive(new ScheduledRefreshCompletedEvent<>(that, jwkSet, context));
+							eventListener.notify(new ScheduledRefreshCompletedEvent<>(that, jwkSet, context));
 						}
 
 						// so next time this method is invoked, it'll be with the updated cache item expiry time
@@ -382,7 +383,7 @@ public class RefreshAheadCachingJWKSetSource<C extends SecurityContext> extends 
 						// ignore, unable to update
 						// another thread will attempt the same
 						if (eventListener != null) {
-							eventListener.receive(new UnableToRefreshAheadOfExpirationEvent<C>(that, context));
+							eventListener.notify(new UnableToRefreshAheadOfExpirationEvent<C>(that, context));
 						}
 					}
 				}

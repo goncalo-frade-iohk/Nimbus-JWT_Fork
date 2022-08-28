@@ -30,6 +30,9 @@ import static org.mockito.Mockito.when;
 import org.junit.Test;
 
 import com.nimbusds.jose.proc.SecurityContext;
+import com.nimbusds.jose.util.events.Event;
+import com.nimbusds.jose.util.events.EventListener;
+
 
 public class RateLimitedJWKSetSourceTest extends AbstractWrappedJWKSetSourceTest {
 
@@ -37,10 +40,10 @@ public class RateLimitedJWKSetSourceTest extends AbstractWrappedJWKSetSourceTest
 	
 	private final List<RateLimitedJWKSetSource.RateLimitedEvent<SecurityContext>> events = new LinkedList<>();
 	
-	private final JWKSetSourceEventListener<RateLimitedJWKSetSource<SecurityContext>,SecurityContext> eventListener =
-		new JWKSetSourceEventListener<RateLimitedJWKSetSource<SecurityContext>, SecurityContext>() {
+	private final EventListener<RateLimitedJWKSetSource<SecurityContext>,SecurityContext> eventListener =
+		new EventListener<RateLimitedJWKSetSource<SecurityContext>, SecurityContext>() {
 			@Override
-			public void receive(JWKSetSourceEvent<RateLimitedJWKSetSource<SecurityContext>, SecurityContext> event) {
+			public void notify(Event<RateLimitedJWKSetSource<SecurityContext>, SecurityContext> event) {
 				events.add((RateLimitedJWKSetSource.RateLimitedEvent<SecurityContext>) event);
 			}
 		};

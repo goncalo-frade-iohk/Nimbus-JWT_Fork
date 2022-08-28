@@ -37,6 +37,9 @@ import com.nimbusds.jose.jwk.JWKSelector;
 import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.proc.SecurityContext;
 import com.nimbusds.jose.util.cache.CachedObject;
+import com.nimbusds.jose.util.events.Event;
+import com.nimbusds.jose.util.events.EventListener;
+
 
 public class CachingJWKSetSourceTest extends AbstractWrappedJWKSetSourceTest {
 	
@@ -61,12 +64,12 @@ public class CachingJWKSetSourceTest extends AbstractWrappedJWKSetSourceTest {
 	};
 	
 	
-	private final List<JWKSetSourceEvent<CachingJWKSetSource<SecurityContext>,SecurityContext>> events = new LinkedList<>();
+	private final List<Event<CachingJWKSetSource<SecurityContext>,SecurityContext>> events = new LinkedList<>();
 	
-	private final JWKSetSourceEventListener<CachingJWKSetSource<SecurityContext>,SecurityContext> eventListener =
-		new JWKSetSourceEventListener<CachingJWKSetSource<SecurityContext>, SecurityContext>() {
+	private final EventListener<CachingJWKSetSource<SecurityContext>,SecurityContext> eventListener =
+		new EventListener<CachingJWKSetSource<SecurityContext>, SecurityContext>() {
 		@Override
-		public void receive(JWKSetSourceEvent<CachingJWKSetSource<SecurityContext>, SecurityContext> event) {
+		public void notify(Event<CachingJWKSetSource<SecurityContext>, SecurityContext> event) {
 			events.add(event);
 		}
 	};
@@ -90,8 +93,8 @@ public class CachingJWKSetSourceTest extends AbstractWrappedJWKSetSourceTest {
 		assertTrue(events.get(1) instanceof CachingJWKSetSource.RefreshCompletedEvent);
 		assertEquals(2, events.size());
 		
-		assertEquals(TIME_TO_LIVE, events.get(0).getJWKSetSource().getTimeToLive());
-		assertEquals(REFRESH_TIMEOUT, events.get(0).getJWKSetSource().getCacheRefreshTimeout());
+		assertEquals(TIME_TO_LIVE, events.get(0).getSource().getTimeToLive());
+		assertEquals(REFRESH_TIMEOUT, events.get(0).getSource().getCacheRefreshTimeout());
 		assertEquals(0, ((CachingJWKSetSource.RefreshInitiatedEvent<SecurityContext>) events.get(0)).getThreadQueueLength());
 	}
 

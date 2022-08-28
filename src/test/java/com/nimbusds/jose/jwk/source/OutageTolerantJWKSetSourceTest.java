@@ -34,6 +34,9 @@ import org.junit.Test;
 import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.proc.SecurityContext;
 import com.nimbusds.jose.util.cache.CachedObject;
+import com.nimbusds.jose.util.events.Event;
+import com.nimbusds.jose.util.events.EventListener;
+
 
 public class OutageTolerantJWKSetSourceTest extends AbstractWrappedJWKSetSourceTest {
 
@@ -41,10 +44,10 @@ public class OutageTolerantJWKSetSourceTest extends AbstractWrappedJWKSetSourceT
 	
 	private final List<OutageTolerantJWKSetSource.OutageEvent<SecurityContext>> events = new LinkedList<>();
 	
-	private final JWKSetSourceEventListener<OutageTolerantJWKSetSource<SecurityContext>,SecurityContext> eventListener =
-		new JWKSetSourceEventListener<OutageTolerantJWKSetSource<SecurityContext>, SecurityContext>() {
+	private final EventListener<OutageTolerantJWKSetSource<SecurityContext>,SecurityContext> eventListener =
+		new EventListener<OutageTolerantJWKSetSource<SecurityContext>, SecurityContext>() {
 			@Override
-			public void receive(JWKSetSourceEvent<OutageTolerantJWKSetSource<SecurityContext>, SecurityContext> event) {
+			public void notify(Event<OutageTolerantJWKSetSource<SecurityContext>, SecurityContext> event) {
 				events.add((OutageTolerantJWKSetSource.OutageEvent<SecurityContext>) event);
 			}
 		};

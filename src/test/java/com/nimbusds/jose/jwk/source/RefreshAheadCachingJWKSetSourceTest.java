@@ -40,6 +40,9 @@ import com.nimbusds.jose.jwk.JWKSelector;
 import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.proc.SecurityContext;
 import com.nimbusds.jose.util.cache.CachedObject;
+import com.nimbusds.jose.util.events.Event;
+import com.nimbusds.jose.util.events.EventListener;
+
 
 public class RefreshAheadCachingJWKSetSourceTest extends AbstractWrappedJWKSetSourceTest {
 
@@ -65,12 +68,12 @@ public class RefreshAheadCachingJWKSetSourceTest extends AbstractWrappedJWKSetSo
 	private static final long REFRESH_AHEAD_TIME = 10_000;
 	protected static final JWKSelector KID_SELECTOR = new JWKSelector(new JWKMatcher.Builder().keyID(KID).build());
 	
-	private final List<JWKSetSourceEvent<CachingJWKSetSource<SecurityContext>,SecurityContext>> events = new LinkedList<>();
+	private final List<Event<CachingJWKSetSource<SecurityContext>,SecurityContext>> events = new LinkedList<>();
 	
-	private final JWKSetSourceEventListener<CachingJWKSetSource<SecurityContext>,SecurityContext> eventListener =
-		new JWKSetSourceEventListener<CachingJWKSetSource<SecurityContext>, SecurityContext>() {
+	private final EventListener<CachingJWKSetSource<SecurityContext>,SecurityContext> eventListener =
+		new EventListener<CachingJWKSetSource<SecurityContext>, SecurityContext>() {
 			@Override
-			public void receive(JWKSetSourceEvent<CachingJWKSetSource<SecurityContext>, SecurityContext> event) {
+			public void notify(Event<CachingJWKSetSource<SecurityContext>, SecurityContext> event) {
 				events.add(event);
 			}
 		};

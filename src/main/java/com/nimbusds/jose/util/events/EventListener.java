@@ -15,50 +15,25 @@
  * specific language governing permissions and limitations under the License.
  */
 
-package com.nimbusds.jose.jwk.source;
+package com.nimbusds.jose.util.events;
 
-
-import java.util.Objects;
 
 import com.nimbusds.jose.proc.SecurityContext;
-import com.nimbusds.jose.util.events.Event;
 
 
 /**
- * Abstract {@linkplain Event}.
+ * Listener for {@linkplain Event}s.
  *
  * @version 2022-08-28
  * @author Vladimir Dzhuvinov
  */
-class AbstractJWKSetSourceEvent<S extends JWKSetSource<C>, C extends SecurityContext> implements Event<S,C> {
-	
-	
-	private final S source;
-	
-	private final C context;
+public interface EventListener<S, C extends SecurityContext> {
 	
 	
 	/**
-	 * Creates a new JWK set source event.
+	 * Notifies the listener of a new event.
 	 *
-	 * @param source  The event source. Must not be {@code null}.
-	 * @param context Optional context, {@code null} if not specified.
+	 * @param event The event.
 	 */
-	AbstractJWKSetSourceEvent(final S source, final C context) {
-		Objects.requireNonNull(context);
-		this.source = source;
-		this.context = context;
-	}
-	
-	
-	@Override
-	public S getSource() {
-		return source;
-	}
-	
-	
-	@Override
-	public C getContext() {
-		return context;
-	}
+	void notify(final Event<S, C> event);
 }

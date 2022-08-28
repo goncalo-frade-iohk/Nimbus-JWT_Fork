@@ -22,6 +22,7 @@ import net.jcip.annotations.ThreadSafe;
 import com.nimbusds.jose.KeySourceException;
 import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.proc.SecurityContext;
+import com.nimbusds.jose.util.events.EventListener;
 
 
 /**
@@ -55,7 +56,7 @@ public class RateLimitedJWKSetSource<C extends SecurityContext> extends JWKSetSo
 	private final long minTimeInterval;
 	private long nextOpeningTime = -1L;
 	private int counter = 0;
-	private final JWKSetSourceEventListener<RateLimitedJWKSetSource<C>, C> eventListener;
+	private final EventListener<RateLimitedJWKSetSource<C>, C> eventListener;
 
 	
 	/**
@@ -70,7 +71,7 @@ public class RateLimitedJWKSetSource<C extends SecurityContext> extends JWKSetSo
 	 */
 	public RateLimitedJWKSetSource(final JWKSetSource<C> source,
 				       final long minTimeInterval,
-				       final JWKSetSourceEventListener<RateLimitedJWKSetSource<C>, C> eventListener) {
+				       final EventListener<RateLimitedJWKSetSource<C>, C> eventListener) {
 		super(source);
 		this.minTimeInterval = minTimeInterval;
 		this.eventListener = eventListener;
@@ -99,7 +100,7 @@ public class RateLimitedJWKSetSource<C extends SecurityContext> extends JWKSetSo
 		}
 		if (rateLimitHit) {
 			if (eventListener != null) {
-				eventListener.receive(new RateLimitedEvent<>(this, context));
+				eventListener.notify(new RateLimitedEvent<>(this, context));
 			}
 			throw new RateLimitReachedException();
 		}

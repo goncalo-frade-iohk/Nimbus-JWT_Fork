@@ -24,6 +24,7 @@ import com.nimbusds.jose.KeySourceException;
 import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.proc.SecurityContext;
 import com.nimbusds.jose.util.cache.CachedObject;
+import com.nimbusds.jose.util.events.EventListener;
 
 
 /**
@@ -65,7 +66,7 @@ public class OutageTolerantJWKSetSource<C extends SecurityContext> extends Abstr
 	}
 	
 	
-	private final JWKSetSourceEventListener<OutageTolerantJWKSetSource<C>, C> eventListener;
+	private final EventListener<OutageTolerantJWKSetSource<C>, C> eventListener;
 	
 	
 	/**
@@ -80,7 +81,7 @@ public class OutageTolerantJWKSetSource<C extends SecurityContext> extends Abstr
 	 */
 	public OutageTolerantJWKSetSource(final JWKSetSource<C> source,
 					  final long timeToLive,
-					  final JWKSetSourceEventListener<OutageTolerantJWKSetSource<C>,C> eventListener) {
+					  final EventListener<OutageTolerantJWKSetSource<C>,C> eventListener) {
 		super(source, timeToLive);
 		this.eventListener = eventListener;
 	}
@@ -101,7 +102,7 @@ public class OutageTolerantJWKSetSource<C extends SecurityContext> extends Abstr
 				if (cache != null && cache.isValid(currentTime)) {
 					long remainingTime = cache.getExpirationTime() - currentTime; // in millis
 					if (eventListener != null) {
-						eventListener.receive(new OutageEvent<>(this, remainingTime, context));
+						eventListener.notify(new OutageEvent<>(this, remainingTime, context));
 					}
 					return cache.get();
 				}

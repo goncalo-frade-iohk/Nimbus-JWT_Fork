@@ -15,33 +15,7 @@
  * specific language governing permissions and limitations under the License.
  */
 
-package com.nimbusds.jose.jwk.source;
-
-
-import com.nimbusds.jose.proc.SecurityContext;
-
-
 /**
- * {@linkplain JWKSetSource} event.
- *
- * @version 2022-08-27
- * @author Vladimir Dzhuvinov
+ * Event listener interfaces.
  */
-public interface JWKSetSourceEvent <S extends JWKSetSource<C>, C extends SecurityContext> {
-	
-	
-	/**
-	 * Returns the event source.
-	 *
-	 * @return The event source.
-	 */
-	S getJWKSetSource();
-	
-	
-	/**
-	 * Returns the optional context.
-	 *
-	 * @return The optional context, {@code null} if not specified.
-	 */
-	C getSecurityContext();
-}
+package com.nimbusds.jose.util.events;

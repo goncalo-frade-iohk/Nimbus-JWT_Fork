@@ -24,6 +24,7 @@ import java.util.Objects;
 import com.nimbusds.jose.proc.SecurityContext;
 import com.nimbusds.jose.util.DefaultResourceRetriever;
 import com.nimbusds.jose.util.ResourceRetriever;
+import com.nimbusds.jose.util.events.EventListener;
 import com.nimbusds.jose.util.health.HealthReportListener;
 
 
@@ -146,26 +147,26 @@ public class JWKSourceBuilder<C extends SecurityContext> {
 	private boolean caching = true;
 	private long cacheTimeToLive = DEFAULT_CACHE_TIME_TO_LIVE;
 	private long cacheRefreshTimeout = DEFAULT_CACHE_REFRESH_TIMEOUT;
-	private JWKSetSourceEventListener<CachingJWKSetSource<C>, C> cachingEventListener;
+	private EventListener<CachingJWKSetSource<C>, C> cachingEventListener;
 
 	private boolean refreshAhead = true;
 	private long refreshAheadTime = DEFAULT_REFRESH_AHEAD_TIME;
 	private boolean refreshAheadScheduled = false;
-	private JWKSetSourceEventListener<CachingJWKSetSource<C>, C> refreshAheadCachingEventListener;
+	private EventListener<CachingJWKSetSource<C>, C> refreshAheadCachingEventListener;
 
 	// rate limiting (retry on network error will not count against this)
 	protected boolean rateLimited = true;
 	protected long minTimeInterval = DEFAULT_RATE_LIMIT_MIN_INTERVAL;
-	private JWKSetSourceEventListener<RateLimitedJWKSetSource<C>, C> rateLimitedEventListener;
+	private EventListener<RateLimitedJWKSetSource<C>, C> rateLimitedEventListener;
 
 	// retrying
 	protected boolean retrying = false;
-	private JWKSetSourceEventListener<RetryingJWKSetSource<C>, C> retryingEventListener;
+	private EventListener<RetryingJWKSetSource<C>, C> retryingEventListener;
 
 	// outage
 	protected boolean outageTolerant = false;
 	protected long outageCacheTimeToLive = -1L;
-	private JWKSetSourceEventListener<OutageTolerantJWKSetSource<C>, C> outageEventListener;
+	private EventListener<OutageTolerantJWKSetSource<C>, C> outageEventListener;
 
 	// health status reporting
 	protected HealthReportListener<C> healthReportListener;
@@ -231,7 +232,7 @@ public class JWKSourceBuilder<C extends SecurityContext> {
 	 */
 	public JWKSourceBuilder<C> cache(final long timeToLive,
 					 final long cacheRefreshTimeout,
-					 final JWKSetSourceEventListener<CachingJWKSetSource<C>, C> eventListener) {
+					 final EventListener<CachingJWKSetSource<C>, C> eventListener) {
 		this.caching = true;
 		this.cacheTimeToLive = timeToLive;
 		this.cacheRefreshTimeout = cacheRefreshTimeout;
@@ -301,7 +302,7 @@ public class JWKSourceBuilder<C extends SecurityContext> {
 	 */
 	public JWKSourceBuilder<C> refreshAheadCache(final long refreshAheadTime,
 						     final boolean scheduled,
-						     final JWKSetSourceEventListener<CachingJWKSetSource<C>, C> eventListener) {
+						     final EventListener<CachingJWKSetSource<C>, C> eventListener) {
 		this.caching = true;
 		this.refreshAhead = true;
 		this.refreshAheadTime = refreshAheadTime;
@@ -350,7 +351,7 @@ public class JWKSourceBuilder<C extends SecurityContext> {
 	 * @return This builder.
 	 */
 	public JWKSourceBuilder<C> rateLimited(final long minTimeInterval,
-					       final JWKSetSourceEventListener<RateLimitedJWKSetSource<C>, C> eventListener) {
+					       final EventListener<RateLimitedJWKSetSource<C>, C> eventListener) {
 		this.rateLimited = true;
 		this.minTimeInterval = minTimeInterval;
 		this.rateLimitedEventListener = eventListener;
@@ -396,7 +397,7 @@ public class JWKSourceBuilder<C extends SecurityContext> {
 	 * @return This builder.
 	 */
 	public JWKSourceBuilder<C> retrying(final boolean enable,
-					    final JWKSetSourceEventListener<RetryingJWKSetSource<C>, C> eventListener) {
+					    final EventListener<RetryingJWKSetSource<C>, C> eventListener) {
 		this.retrying = enable;
 		this.retryingEventListener = eventListener;
 		return this;
@@ -472,7 +473,7 @@ public class JWKSourceBuilder<C extends SecurityContext> {
 	 * @return This builder.
 	 */
 	public JWKSourceBuilder<C> outageTolerant(final long timeToLive,
-						  final JWKSetSourceEventListener<OutageTolerantJWKSetSource<C>, C> eventListener) {
+						  final EventListener<OutageTolerantJWKSetSource<C>, C> eventListener) {
 		this.outageTolerant = true;
 		this.outageCacheTimeToLive = timeToLive;
 		this.outageEventListener = eventListener;

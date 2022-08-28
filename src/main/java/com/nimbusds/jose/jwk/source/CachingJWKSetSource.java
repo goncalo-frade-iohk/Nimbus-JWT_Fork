@@ -28,6 +28,7 @@ import com.nimbusds.jose.KeySourceException;
 import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.proc.SecurityContext;
 import com.nimbusds.jose.util.cache.CachedObject;
+import com.nimbusds.jose.util.events.EventListener;
 
 
 /**
@@ -141,7 +142,7 @@ public class CachingJWKSetSource<C extends SecurityContext> extends AbstractCach
 
 	private final long cacheRefreshTimeout;
 	
-	private final JWKSetSourceEventListener<CachingJWKSetSource<C>, C> eventListener;
+	private final EventListener<CachingJWKSetSource<C>, C> eventListener;
 	
 	
 	/**
@@ -159,7 +160,7 @@ public class CachingJWKSetSource<C extends SecurityContext> extends AbstractCach
 	public CachingJWKSetSource(final JWKSetSource<C> source,
 				   final long timeToLive,
 				   final long cacheRefreshTimeout,
-				   final JWKSetSourceEventListener<CachingJWKSetSource<C>,C> eventListener) {
+				   final EventListener<CachingJWKSetSource<C>,C> eventListener) {
 		super(source, timeToLive);
 		this.cacheRefreshTimeout = cacheRefreshTimeout;
 		this.eventListener = eventListener;
@@ -221,13 +222,13 @@ public class CachingJWKSetSource<C extends SecurityContext> extends AbstractCach
 						// Seems cache was not updated.
 						// We hold the lock, so safe to update it now
 						if (eventListener != null) {
-							eventListener.receive(new RefreshInitiatedEvent<>(this, lock.getQueueLength(), context));
+							eventListener.notify(new RefreshInitiatedEvent<>(this, lock.getQueueLength(), context));
 						}
 						
 						CachedObject<JWKSet> result = loadJWKSetNotThreadSafe(currentTime, context);
 						
 						if (eventListener != null) {
-							eventListener.receive(new RefreshCompletedEvent<>(this, result.get(), lock.getQueueLength(), context));
+							eventListener.notify(new RefreshCompletedEvent<>(this, result.get(), lock.getQueueLength(), context));
 						}
 						
 						cache = result;
@@ -241,7 +242,7 @@ public class CachingJWKSetSource<C extends SecurityContext> extends AbstractCach
 			} else {
 				// Lock held by another thread, wait for refresh timeout
 				if (eventListener != null) {
-					eventListener.receive(new WaitingForRefreshEvent<>(this, lock.getQueueLength(), context));
+					eventListener.notify(new WaitingForRefreshEvent<>(this, lock.getQueueLength(), context));
 				}
 
 				if (lock.tryLock(getCacheRefreshTimeout(), TimeUnit.MILLISECONDS)) {
@@ -252,13 +253,13 @@ public class CachingJWKSetSource<C extends SecurityContext> extends AbstractCach
 							// Seems cache was not updated.
 							// We hold the lock, so safe to update it now
 							if (eventListener != null) {
-								eventListener.receive(new RefreshInitiatedEvent<>(this, lock.getQueueLength(), context));
+								eventListener.notify(new RefreshInitiatedEvent<>(this, lock.getQueueLength(), context));
 							}
 							
 							cache = loadJWKSetNotThreadSafe(currentTime, context);
 							
 							if (eventListener != null) {
-								eventListener.receive(new RefreshCompletedEvent<>(this, cache.get(), lock.getQueueLength(), context));
+								eventListener.notify(new RefreshCompletedEvent<>(this, cache.get(), lock.getQueueLength(), context));
 							}
 						} else {
 							// load updated value
@@ -270,7 +271,7 @@ public class CachingJWKSetSource<C extends SecurityContext> extends AbstractCach
 				} else {
 
 					if (eventListener != null) {
-						eventListener.receive(new RefreshTimedOutEvent<>(this, lock.getQueueLength(), context));
+						eventListener.notify(new RefreshTimedOutEvent<>(this, lock.getQueueLength(), context));
 					}
 					
 					throw new JWKSetUnavailableException("Timeout while waiting for cache refresh (" + cacheRefreshTimeout + "ms exceeded)");
@@ -282,7 +283,7 @@ public class CachingJWKSetSource<C extends SecurityContext> extends AbstractCach
 			}
 			
 			if (eventListener != null) {
-				eventListener.receive(new UnableToRefreshEvent<>(this, context));
+				eventListener.notify(new UnableToRefreshEvent<>(this, context));
 			}
 			
 			throw new JWKSetUnavailableException("Unable to refresh cache");

@@ -71,17 +71,6 @@ public class RetryingJWKSetSource<C extends SecurityContext> extends JWKSetSourc
 	/**
 	 * Creates a new JWK set source with support for retrial.
 	 *
-	 * @param source   The JWK set source to decorate. Must not be
-	 *                 {@code null}.
-	 */
-	public RetryingJWKSetSource(final JWKSetSource<C> source) {
-		this(source, null);
-	}
-	
-	
-	/**
-	 * Creates a new JWK set source with support for retrial.
-	 *
 	 * @param source        The JWK set source to decorate. Must not be
 	 *                      {@code null}.
 	 * @param eventListener The event listener, {@code null} if not

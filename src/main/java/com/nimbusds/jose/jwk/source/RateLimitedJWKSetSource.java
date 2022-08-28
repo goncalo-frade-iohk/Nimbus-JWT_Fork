@@ -65,19 +65,6 @@ public class RateLimitedJWKSetSource<C extends SecurityContext> extends JWKSetSo
 	 *                        {@code null}.
 	 * @param minTimeInterval The minimum allowed time interval between two
 	 *                        JWK set retrievals, in milliseconds.
-	 */
-	public RateLimitedJWKSetSource(final JWKSetSource<C> source, final long minTimeInterval) {
-		this(source, minTimeInterval, null);
-	}
-
-	
-	/**
-	 * Creates a new JWK set source that limits the number of requests.
-	 *
-	 * @param source          The JWK set source to decorate. Must not be
-	 *                        {@code null}.
-	 * @param minTimeInterval The minimum allowed time interval between two
-	 *                        JWK set retrievals, in milliseconds.
 	 * @param eventListener   The event listener, {@code null} if not
 	 *                        specified.
 	 */

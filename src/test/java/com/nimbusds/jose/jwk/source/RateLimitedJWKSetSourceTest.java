@@ -49,7 +49,7 @@ public class RateLimitedJWKSetSourceTest extends AbstractWrappedJWKSetSourceTest
 	
 	@Test
 	public void rateLimitedWhenEmptyBucket() throws Exception {
-		source = new RateLimitedJWKSetSource<>(wrappedJWKSetSource, MIN_TIME_INTERVAL);
+		source = new RateLimitedJWKSetSource<>(wrappedJWKSetSource, MIN_TIME_INTERVAL, null);
 		when(wrappedJWKSetSource.getJWKSet(eq(false), anyLong(), anySecurityContext())).thenReturn(jwkSet);
 		assertEquals(jwkSet, source.getJWKSet(false, System.currentTimeMillis(), context));
 		assertEquals(jwkSet, source.getJWKSet(false, System.currentTimeMillis() + 1, context));
@@ -99,7 +99,7 @@ public class RateLimitedJWKSetSourceTest extends AbstractWrappedJWKSetSourceTest
 	@Test
 	public void refillBucket() throws Exception {
 		
-		source = new RateLimitedJWKSetSource<>(wrappedJWKSetSource, MIN_TIME_INTERVAL);
+		source = new RateLimitedJWKSetSource<>(wrappedJWKSetSource, MIN_TIME_INTERVAL, null);
 		
 		long time = System.currentTimeMillis();
 		

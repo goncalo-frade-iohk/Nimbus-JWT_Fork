@@ -146,21 +146,26 @@ public class JWKSourceBuilder<C extends SecurityContext> {
 	private boolean caching = true;
 	private long cacheTimeToLive = DEFAULT_CACHE_TIME_TO_LIVE;
 	private long cacheRefreshTimeout = DEFAULT_CACHE_REFRESH_TIMEOUT;
+	private JWKSetSourceEventListener<CachingJWKSetSource<C>, C> cachingEventListener;
 
 	private boolean refreshAhead = true;
 	private long refreshAheadTime = DEFAULT_REFRESH_AHEAD_TIME;
 	private boolean refreshAheadScheduled = false;
+	private JWKSetSourceEventListener<CachingJWKSetSource<C>, C> refreshAheadCachingEventListener;
 
 	// rate limiting (retry on network error will not count against this)
 	protected boolean rateLimited = true;
 	protected long minTimeInterval = DEFAULT_RATE_LIMIT_MIN_INTERVAL;
+	private JWKSetSourceEventListener<RateLimitedJWKSetSource<C>, C> rateLimitedEventListener;
 
 	// retrying
 	protected boolean retrying = false;
+	private JWKSetSourceEventListener<RetryingJWKSetSource<C>, C> retryingEventListener;
 
 	// outage
 	protected boolean outageTolerant = false;
 	protected long outageCacheTimeToLive = -1L;
+	private JWKSetSourceEventListener<OutageTolerantJWKSetSource<C>, C> outageEventListener;
 
 	// health status reporting
 	protected HealthReportListener<C> healthReportListener;
@@ -213,6 +218,29 @@ public class JWKSourceBuilder<C extends SecurityContext> {
 
 
 	/**
+	 * Enables caching of the retrieved JWK set.
+	 *
+	 * @param timeToLive          The time to live of the cached JWK set,
+	 *                            in milliseconds.
+	 * @param cacheRefreshTimeout The cache refresh timeout, in
+	 *                            milliseconds.
+	 * @param eventListener       The event listener, {@code null} if not
+	 *                            specified.
+	 *
+	 * @return This builder.
+	 */
+	public JWKSourceBuilder<C> cache(final long timeToLive,
+					 final long cacheRefreshTimeout,
+					 final JWKSetSourceEventListener<CachingJWKSetSource<C>, C> eventListener) {
+		this.caching = true;
+		this.cacheTimeToLive = timeToLive;
+		this.cacheRefreshTimeout = cacheRefreshTimeout;
+		this.cachingEventListener = eventListener;
+		return this;
+	}
+
+
+	/**
 	 * Enables caching of the JWK set forever (no expiration).
 	 *
 	 * @return This builder.
@@ -258,6 +286,29 @@ public class JWKSourceBuilder<C extends SecurityContext> {
 		this.refreshAheadScheduled = scheduled;
 		return this;
 	}
+	
+	
+	/**
+	 * Enables refresh-ahead caching of the JWK set.
+	 *
+	 * @param refreshAheadTime The refresh ahead time, in milliseconds.
+	 * @param scheduled        {@code true} to refresh in a scheduled
+	 *                         manner, regardless of requests.
+	 * @param eventListener    The event listener, {@code null} if not
+	 *                         specified.
+	 *
+	 * @return This builder.
+	 */
+	public JWKSourceBuilder<C> refreshAheadCache(final long refreshAheadTime,
+						     final boolean scheduled,
+						     final JWKSetSourceEventListener<CachingJWKSetSource<C>, C> eventListener) {
+		this.caching = true;
+		this.refreshAhead = true;
+		this.refreshAheadTime = refreshAheadTime;
+		this.refreshAheadScheduled = scheduled;
+		this.refreshAheadCachingEventListener = eventListener;
+		return this;
+	}
 
 
 	/**
@@ -286,6 +337,25 @@ public class JWKSourceBuilder<C extends SecurityContext> {
 		this.minTimeInterval = minTimeInterval;
 		return this;
 	}
+
+	
+	/**
+	 * Enables rate limiting of the JWK set retrieval.
+	 *
+	 * @param minTimeInterval The minimum allowed time interval between two
+	 *                        JWK set retrievals, in milliseconds.
+	 * @param eventListener   The event listener, {@code null} if not
+	 *                        specified.
+	 *
+	 * @return This builder.
+	 */
+	public JWKSourceBuilder<C> rateLimited(final long minTimeInterval,
+					       final JWKSetSourceEventListener<RateLimitedJWKSetSource<C>, C> eventListener) {
+		this.rateLimited = true;
+		this.minTimeInterval = minTimeInterval;
+		this.rateLimitedEventListener = eventListener;
+		return this;
+	}
 	
 	
 	/**
@@ -311,6 +381,24 @@ public class JWKSourceBuilder<C extends SecurityContext> {
 	 */
 	public JWKSourceBuilder<C> retrying(final boolean enable) {
 		this.retrying = enable;
+		return this;
+	}
+	
+	
+	/**
+	 * Enables single retrial to retrieve the JWK set to work around
+	 * transient network issues.
+	 *
+	 * @param enable        {@code true} to enable single retrial.
+	 * @param eventListener The event listener, {@code null} if not
+	 *                      specified.
+	 *
+	 * @return This builder.
+	 */
+	public JWKSourceBuilder<C> retrying(final boolean enable,
+					    final JWKSetSourceEventListener<RetryingJWKSetSource<C>, C> eventListener) {
+		this.retrying = enable;
+		this.retryingEventListener = eventListener;
 		return this;
 	}
 
@@ -370,6 +458,26 @@ public class JWKSourceBuilder<C extends SecurityContext> {
 		this.outageCacheTimeToLive = timeToLive;
 		return this;
 	}
+	
+	
+	/**
+	 * Enables outage tolerance by serving a non-expiring cached JWK set in
+ 	 * case of outage.
+	 *
+	 * @param timeToLive    The time to live of the cached JWK set to cover
+	 *                      outages, in milliseconds.
+	 * @param eventListener The event listener, {@code null} if not
+	 *                      specified.
+	 *
+	 * @return This builder.
+	 */
+	public JWKSourceBuilder<C> outageTolerant(final long timeToLive,
+						  final JWKSetSourceEventListener<OutageTolerantJWKSetSource<C>, C> eventListener) {
+		this.outageTolerant = true;
+		this.outageCacheTimeToLive = timeToLive;
+		this.outageEventListener = eventListener;
+		return this;
+	}
 
 	
 	/**
@@ -402,7 +510,7 @@ public class JWKSourceBuilder<C extends SecurityContext> {
 		JWKSetSource<C> source = jwkSetSource;
 
 		if (retrying) {
-			source = new RetryingJWKSetSource<>(source);
+			source = new RetryingJWKSetSource<>(source, retryingEventListener);
 		}
 		
 		if (outageTolerant) {
@@ -413,7 +521,7 @@ public class JWKSourceBuilder<C extends SecurityContext> {
 					outageCacheTimeToLive = DEFAULT_CACHE_TIME_TO_LIVE * 10;
 				}
 			}
-			source = new OutageTolerantJWKSetSource<>(source, outageCacheTimeToLive, null);
+			source = new OutageTolerantJWKSetSource<>(source, outageCacheTimeToLive, outageEventListener);
 		}
 
 		if (healthReportListener != null) {
@@ -421,13 +529,13 @@ public class JWKSourceBuilder<C extends SecurityContext> {
 		}
 
 		if (rateLimited) {
-			source = new RateLimitedJWKSetSource<>(source, minTimeInterval);
+			source = new RateLimitedJWKSetSource<>(source, minTimeInterval, rateLimitedEventListener);
 		}
 		
 		if (refreshAhead) {
-			source = new RefreshAheadCachingJWKSetSource<>(source, cacheTimeToLive, cacheRefreshTimeout, refreshAheadTime, refreshAheadScheduled, null);
+			source = new RefreshAheadCachingJWKSetSource<>(source, cacheTimeToLive, cacheRefreshTimeout, refreshAheadTime, refreshAheadScheduled, refreshAheadCachingEventListener);
 		} else if (caching) {
-			source = new CachingJWKSetSource<>(source, cacheTimeToLive, cacheRefreshTimeout, null);
+			source = new CachingJWKSetSource<>(source, cacheTimeToLive, cacheRefreshTimeout, cachingEventListener);
 		}
 
 		JWKSource<C> jwkSource = new JWKSetBasedJWKSource<>(source);

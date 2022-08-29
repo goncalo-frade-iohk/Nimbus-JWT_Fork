@@ -313,9 +313,11 @@ public class JWKSourceBuilderTest extends AbstractWrappedJWKSetSourceTest {
 	@Test
 	public void all() {
 		
-		HealthReportListener<SecurityContext> healthReportListener = new HealthReportListener<SecurityContext>() {
+		HealthReportListener<JWKSetSourceWithHealthStatusReporting<SecurityContext>, SecurityContext> healthReportListener =
+			new HealthReportListener<JWKSetSourceWithHealthStatusReporting<SecurityContext>, SecurityContext>() {
+			
 			@Override
-			public void report(HealthReport healthReport, SecurityContext context) {
+			public void notify(HealthReport<JWKSetSourceWithHealthStatusReporting<SecurityContext>, SecurityContext> report) {
 			
 			}
 		};

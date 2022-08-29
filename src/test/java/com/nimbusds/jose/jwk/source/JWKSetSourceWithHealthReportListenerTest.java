@@ -38,19 +38,16 @@ public class JWKSetSourceWithHealthReportListenerTest extends AbstractWrappedJWK
 
 	private JWKSetSourceWithHealthStatusReporting<SecurityContext> source;
 	
-	private static class HealthListener implements HealthReportListener<SecurityContext> {
+	private static class HealthListener implements HealthReportListener<JWKSetSourceWithHealthStatusReporting<SecurityContext>, SecurityContext> {
 		
+		private HealthReport<JWKSetSourceWithHealthStatusReporting<SecurityContext>, SecurityContext> lastReport;
 		
-		private HealthReport lastReport = null;
-		
-		
-		public HealthReport getLastReport() {
+		HealthReport<JWKSetSourceWithHealthStatusReporting<SecurityContext>, SecurityContext> getLastReport() {
 			return lastReport;
 		}
 		
-		
 		@Override
-		public void report(HealthReport healthReport, SecurityContext context) {
+		public void notify(HealthReport<JWKSetSourceWithHealthStatusReporting<SecurityContext>, SecurityContext> healthReport) {
 			lastReport = healthReport;
 		}
 	}

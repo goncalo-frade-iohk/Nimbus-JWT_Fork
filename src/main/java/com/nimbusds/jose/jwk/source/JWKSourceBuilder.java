@@ -46,7 +46,7 @@ import com.nimbusds.jose.util.health.HealthReportListener;
  *
  * @author Thomas Rørvik Skjølberg
  * @author Vladimir Dzhuvinov
- * @version 2022-08-28
+ * @version 2022-08-29
  */
 public class JWKSourceBuilder<C extends SecurityContext> {
 	
@@ -169,7 +169,7 @@ public class JWKSourceBuilder<C extends SecurityContext> {
 	private EventListener<OutageTolerantJWKSetSource<C>, C> outageEventListener;
 
 	// health status reporting
-	protected HealthReportListener<C> healthReportListener;
+	protected HealthReportListener<JWKSetSourceWithHealthStatusReporting<C>, C> healthReportListener;
 
 	// failover
 	protected JWKSource<C> failover;
@@ -412,7 +412,7 @@ public class JWKSourceBuilder<C extends SecurityContext> {
 	 *
 	 * @return This builder.
 	 */
-	public JWKSourceBuilder<C> healthReporting(final HealthReportListener<C> listener) {
+	public JWKSourceBuilder<C> healthReporting(final HealthReportListener<JWKSetSourceWithHealthStatusReporting<C>, C> listener) {
 		this.healthReportListener = listener;
 		return this;
 	}

@@ -23,57 +23,74 @@ import java.util.Date;
 import junit.framework.TestCase;
 
 import com.nimbusds.jose.KeySourceException;
-import com.nimbusds.jwt.util.DateUtils;
+import com.nimbusds.jose.proc.SecurityContext;
+import com.nimbusds.jose.proc.SimpleSecurityContext;
 
 
 public class HealthReportTest extends TestCase {
+	
+	
+	private static final Object SOURCE = new Object();
+	private static final Exception EXCEPTION = new KeySourceException("JWK set retrieval failed");
+	private static final long TIMESTAMP = new Date().getTime();
 
 
-	public void testMinimalConstructor() {
-		
-		HealthReport report = new HealthReport(HealthStatus.HEALTHY);
+	public void testConstructor_healthy() {
+		HealthReport<Object, ?> report = new HealthReport<>(SOURCE, HealthStatus.HEALTHY, TIMESTAMP, null);
+		assertEquals(SOURCE, report.getSource());
 		assertEquals(HealthStatus.HEALTHY, report.getHealthStatus());
-		DateUtils.isWithin(DateUtils.fromSecondsSinceEpoch(report.getTimestamp() / 1000L), new Date(), 1);
 		assertNull(report.getException());
-		assertTrue(report.toString().startsWith("HealthReport{status=HEALTHY, timestamp="));
+		assertEquals(TIMESTAMP, report.getTimestamp());
+		assertNull(report.getContext());
+		
+		assertEquals("HealthReport{source=" + SOURCE + ", status=HEALTHY, exception=null, timestamp=" + TIMESTAMP + ", context=null}", report.toString());
 	}
 
 
-	public void testFullConstructor_healthy() {
-		
-		long timestamp = new Date().getTime();
-		
-		HealthReport report = new HealthReport(HealthStatus.NOT_HEALTHY, timestamp);
+	public void testConstructor_notHealthy() {
+		HealthReport<Object, ?> report = new HealthReport<>(SOURCE, HealthStatus.NOT_HEALTHY, EXCEPTION, TIMESTAMP, null);
+		assertEquals(SOURCE, report.getSource());
 		assertEquals(HealthStatus.NOT_HEALTHY, report.getHealthStatus());
-		assertNull(report.getException());
-		assertEquals(timestamp, report.getTimestamp());
+		assertEquals(EXCEPTION, report.getException());
+		assertEquals(TIMESTAMP, report.getTimestamp());
+		assertNull(report.getContext());
 		
-		assertEquals("HealthReport{status=NOT_HEALTHY, timestamp=" + timestamp + "}", report.toString());
+		assertEquals("HealthReport{source=" + SOURCE + ", status=NOT_HEALTHY, exception=com.nimbusds.jose.KeySourceException: JWK set retrieval failed, timestamp=" + TIMESTAMP + ", context=null}", report.toString());
 	}
-
-
-	public void testFullConstructor_notHealthy() {
+	
+	
+	public void testConstructor_withContext() {
 		
-		long timestamp = new Date().getTime();
+		SecurityContext context = new SimpleSecurityContext();
 		
-		Exception exception = new KeySourceException("JWK set retrieval failed");
+		HealthReport<Object, SecurityContext> report = new HealthReport<>(SOURCE, HealthStatus.HEALTHY, TIMESTAMP, context);
 		
-		HealthReport report = new HealthReport(HealthStatus.NOT_HEALTHY, exception, timestamp);
-		assertEquals(HealthStatus.NOT_HEALTHY, report.getHealthStatus());
-		assertEquals(exception, report.getException());
-		assertEquals(timestamp, report.getTimestamp());
-		
-		assertEquals("HealthReport{status=NOT_HEALTHY, timestamp=" + timestamp + "}", report.toString());
+		assertEquals(SOURCE, report.getSource());
+		assertEquals(HealthStatus.HEALTHY, report.getHealthStatus());
+		assertNull(report.getException());
+		assertEquals(TIMESTAMP, report.getTimestamp());
+		assertEquals(context, report.getContext());
 	}
 	
 	
 	public void testStatusMustNotBeNull() {
 		
 		try {
-			new HealthReport(null);
+			new HealthReport(SOURCE, null, TIMESTAMP, null);
 			fail();
 		} catch (NullPointerException e) {
 			assertNull(e.getMessage());
+		}
+	}
+	
+	
+	public void testRejectHealthyWithException() {
+		
+		try {
+			new HealthReport(SOURCE, HealthStatus.HEALTHY, EXCEPTION, TIMESTAMP, null);
+			fail();
+		} catch (IllegalArgumentException e) {
+			assertEquals("Exception not accepted for a healthy status", e.getMessage());
 		}
 	}
 }

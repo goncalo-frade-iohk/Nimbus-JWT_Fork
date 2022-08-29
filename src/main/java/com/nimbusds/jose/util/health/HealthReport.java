@@ -22,15 +22,24 @@ import java.util.Objects;
 
 import net.jcip.annotations.Immutable;
 
+import com.nimbusds.jose.proc.SecurityContext;
+import com.nimbusds.jose.util.events.Event;
+
 
 /**
  * Health report.
  *
- * @version 2022-08-24
+ * @version 2022-08-29
  * @author Vladimir Dzhuvinov
  */
 @Immutable
-public class HealthReport {
+public class HealthReport <S, C extends SecurityContext> implements Event<S, C> {
+	
+	
+	/**
+	 * The event source.
+	 */
+	private final S source;
 	
 	
 	/**
@@ -52,43 +61,69 @@ public class HealthReport {
 	
 	
 	/**
-	 * Creates a new health report.
-	 *
-	 * @param status The health status. Must not be {@code null}.
+	 * The optional context.
 	 */
-	public HealthReport(final HealthStatus status) {
-		this(status, System.currentTimeMillis());
-	}
+	private final C context;
 	
 	
 	/**
 	 * Creates a new health report.
 	 *
+	 * @param source    The event source.
 	 * @param status    The health status. Must not be {@code null}.
 	 * @param timestamp The timestamp, in milliseconds since the Unix
 	 *                  epoch.
+	 * @param context   The optional context, {@code null} if not
+	 *                  specified.
 	 */
-	public HealthReport(final HealthStatus status, final long timestamp) {
-		this(status, null, timestamp);
+	public HealthReport(final S source,
+			    final HealthStatus status,
+			    final long timestamp,
+			    final C context) {
+		this(source, status, null, timestamp, context);
 	}
 	
 	
 	/**
 	 * Creates a new health report.
 	 *
+	 * @param source    The event source.
 	 * @param status    The health status. Must not be {@code null}.
 	 * @param exception The exception in case of a
 	 *                  {@link HealthStatus#NOT_HEALTHY}, {@code null} if
 	 *                  not specified.
-	 *
 	 * @param timestamp The timestamp, in milliseconds since the Unix
 	 *                  epoch.
+	 * @param context   The optional context, {@code null} if not
+	 *                  specified.
 	 */
-	public HealthReport(final HealthStatus status, final Exception exception, final long timestamp) {
+	public HealthReport(final S source,
+			    final HealthStatus status,
+			    final Exception exception,
+			    final long timestamp,
+			    final C context) {
+		Objects.requireNonNull(source);
+		this.source = source;
 		Objects.requireNonNull(status);
 		this.status = status;
+		if (exception != null && HealthStatus.HEALTHY.equals(status)) {
+			throw new IllegalArgumentException("Exception not accepted for a healthy status");
+		}
 		this.exception = exception;
 		this.timestamp = timestamp;
+		this.context = context;
+	}
+	
+	
+	@Override
+	public S getSource() {
+		return source;
+	}
+	
+	
+	@Override
+	public C getContext() {
+		return context;
 	}
 	
 	
@@ -126,8 +161,11 @@ public class HealthReport {
 	@Override
 	public String toString() {
 		final StringBuilder sb = new StringBuilder("HealthReport{");
-		sb.append("status=").append(status);
+		sb.append("source=").append(source);
+		sb.append(", status=").append(status);
+		sb.append(", exception=").append(exception);
 		sb.append(", timestamp=").append(timestamp);
+		sb.append(", context=").append(context);
 		sb.append('}');
 		return sb.toString();
 	}

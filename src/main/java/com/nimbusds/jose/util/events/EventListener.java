@@ -22,9 +22,9 @@ import com.nimbusds.jose.proc.SecurityContext;
 
 
 /**
- * Listener for {@linkplain Event}s.
+ * Listener of untyped {@linkplain Event}s.
  *
- * @version 2022-08-28
+ * @version 2022-08-29
  * @author Vladimir Dzhuvinov
  */
 public interface EventListener<S, C extends SecurityContext> {

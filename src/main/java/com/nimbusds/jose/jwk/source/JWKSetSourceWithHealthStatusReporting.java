@@ -35,13 +35,13 @@ import com.nimbusds.jose.util.health.HealthStatus;
  *
  * @author Thomas Rørvik Skjølberg
  * @author Vladimir Dzhuvinov
- * @version 2022-08-24
+ * @version 2022-08-29
  */
 @ThreadSafe
 public class JWKSetSourceWithHealthStatusReporting<C extends SecurityContext> extends JWKSetSourceWrapper<C> {
 	
 	
-	private final HealthReportListener<C> healthReportListener;
+	private final HealthReportListener<JWKSetSourceWithHealthStatusReporting<C>, C> healthReportListener;
 	
 	
 	/**
@@ -54,7 +54,7 @@ public class JWKSetSourceWithHealthStatusReporting<C extends SecurityContext> ex
 	 *                             {@code null}.
 	 */
 	public JWKSetSourceWithHealthStatusReporting(final JWKSetSource<C> source,
-						     final HealthReportListener<C> healthReportListener) {
+						     final HealthReportListener<JWKSetSourceWithHealthStatusReporting<C>, C> healthReportListener) {
 		super(source);
 		Objects.requireNonNull(healthReportListener);
 		this.healthReportListener = healthReportListener;
@@ -68,10 +68,9 @@ public class JWKSetSourceWithHealthStatusReporting<C extends SecurityContext> ex
 		JWKSet jwkSet;
 		try {
 			jwkSet = getSource().getJWKSet(forceReload, currentTime, context);
-			healthReportListener.report(new HealthReport(HealthStatus.HEALTHY, currentTime), context);
+			healthReportListener.notify(new HealthReport<>(this, HealthStatus.HEALTHY, currentTime, context));
 		} catch (Exception e) {
-			HealthReport report = new HealthReport(HealthStatus.NOT_HEALTHY, e, currentTime);
-			healthReportListener.report(report, context);
+			healthReportListener.notify(new HealthReport<>(this, HealthStatus.NOT_HEALTHY, e, currentTime, context));
 			throw e;
 		}
 

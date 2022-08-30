@@ -152,7 +152,6 @@ public class JWKSourceBuilder<C extends SecurityContext> {
 	private boolean refreshAhead = true;
 	private long refreshAheadTime = DEFAULT_REFRESH_AHEAD_TIME;
 	private boolean refreshAheadScheduled = false;
-	private EventListener<CachingJWKSetSource<C>, C> refreshAheadCachingEventListener;
 
 	// rate limiting (retry on network error will not count against this)
 	private boolean rateLimited = true;
@@ -307,7 +306,7 @@ public class JWKSourceBuilder<C extends SecurityContext> {
 		this.refreshAhead = true;
 		this.refreshAheadTime = refreshAheadTime;
 		this.refreshAheadScheduled = scheduled;
-		this.refreshAheadCachingEventListener = eventListener;
+		this.cachingEventListener = eventListener;
 		return this;
 	}
 
@@ -534,7 +533,7 @@ public class JWKSourceBuilder<C extends SecurityContext> {
 		}
 		
 		if (refreshAhead) {
-			source = new RefreshAheadCachingJWKSetSource<>(source, cacheTimeToLive, cacheRefreshTimeout, refreshAheadTime, refreshAheadScheduled, refreshAheadCachingEventListener);
+			source = new RefreshAheadCachingJWKSetSource<>(source, cacheTimeToLive, cacheRefreshTimeout, refreshAheadTime, refreshAheadScheduled, cachingEventListener);
 		} else if (caching) {
 			source = new CachingJWKSetSource<>(source, cacheTimeToLive, cacheRefreshTimeout, cachingEventListener);
 		}

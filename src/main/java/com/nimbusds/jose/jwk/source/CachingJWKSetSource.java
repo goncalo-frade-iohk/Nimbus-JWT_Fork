@@ -36,7 +36,7 @@ import com.nimbusds.jose.util.events.EventListener;
  *
  * @author Thomas Rørvik Skjølberg
  * @author Vladimir Dzhuvinov
- * @version 2022-08-28
+ * @version 2022-08-30
  */
 @ThreadSafe
 public class CachingJWKSetSource<C extends SecurityContext> extends AbstractCachingJWKSetSource<C> {
@@ -160,7 +160,7 @@ public class CachingJWKSetSource<C extends SecurityContext> extends AbstractCach
 	public CachingJWKSetSource(final JWKSetSource<C> source,
 				   final long timeToLive,
 				   final long cacheRefreshTimeout,
-				   final EventListener<CachingJWKSetSource<C>,C> eventListener) {
+				   final EventListener<CachingJWKSetSource<C>, C> eventListener) {
 		super(source, timeToLive);
 		this.cacheRefreshTimeout = cacheRefreshTimeout;
 		this.eventListener = eventListener;

@@ -127,6 +127,42 @@ public class JWKSourceBuilderIntegrationTest {
 	
 	
 	@Test
+	public void retrying() throws KeySourceException {
+		
+		onRequest()
+			.havingMethodEqualTo("GET")
+			.havingPathEqualTo("/jwks.json")
+		.respond()
+			.withStatus(404)
+		.thenRespond()
+			.withStatus(200)
+			.withBody(JWK_SET_1.toString())
+			.withEncoding(StandardCharset.UTF_8)
+			.withContentType("application/json");
+		
+		final List<Event<RetryingJWKSetSource<SecurityContext>, SecurityContext>> retryingEvents = new LinkedList<>();
+		
+		JWKSource<SecurityContext> source = JWKSourceBuilder.create(jwkSetURL)
+			.retrying(true,
+				new EventListener<RetryingJWKSetSource<SecurityContext>, SecurityContext>() {
+				@Override
+				public void notify(Event<RetryingJWKSetSource<SecurityContext>, SecurityContext> event) {
+					retryingEvents.add(event);
+				}
+			})
+			.build();
+		
+		// Retrieve and cache
+		List<JWK> jwks = source.get(new JWKSelector(new JWKMatcher.Builder().keyID(EC_JWK_1.getKeyID()).build()), null);
+		
+		assertEquals(Collections.singletonList(EC_JWK_1), jwks);
+		
+		assertTrue(retryingEvents.get(0) instanceof RetryingJWKSetSource.RetrialEvent);
+		assertEquals(1, retryingEvents.size());
+	}
+	
+	
+	@Test
 	public void healthReportListener() throws Exception {
 		
 		onRequest()
@@ -197,8 +233,11 @@ public class JWKSourceBuilderIntegrationTest {
 		// New kid, requires update, HTTP 404
 		try {
 			source.get(new JWKSelector(new JWKMatcher.Builder().keyID(EC_JWK_2.getKeyID()).build()), CONTEXT);
+			System.out.println(lastReport.get().getHealthStatus());
 			fail();
 		} catch (KeySourceException e) {
+			
+			
 			
 			assertEquals("Couldn't retrieve JWK set from URL: http://localhost:" + port() + "/jwks.json", e.getMessage());
 			

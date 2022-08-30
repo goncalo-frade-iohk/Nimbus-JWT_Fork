@@ -45,7 +45,7 @@ class AbstractJWKSetSourceEvent<S extends JWKSetSource<C>, C extends SecurityCon
 	 * @param context Optional context, {@code null} if not specified.
 	 */
 	AbstractJWKSetSourceEvent(final S source, final C context) {
-		Objects.requireNonNull(context);
+		Objects.requireNonNull(source);
 		this.source = source;
 		this.context = context;
 	}

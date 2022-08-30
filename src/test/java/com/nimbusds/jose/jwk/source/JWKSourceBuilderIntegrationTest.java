@@ -217,6 +217,50 @@ public class JWKSourceBuilderIntegrationTest {
 	
 	
 	@Test
+	public void failover() throws Exception {
+		
+		onRequest()
+			.havingMethodEqualTo("GET")
+			.havingPathEqualTo("/jwks.json")
+		.respond()
+			.withStatus(200)
+			.withBody(JWK_SET_1.toString())
+			.withEncoding(StandardCharset.UTF_8)
+			.withContentType("application/json")
+		.thenRespond()
+			.withStatus(500);
+		
+		onRequest()
+			.havingMethodEqualTo("GET")
+			.havingPathEqualTo("/failover/jwks.json")
+		.respond()
+			.withStatus(200)
+			.withBody(JWK_SET_1_2.toString())
+			.withEncoding(StandardCharset.UTF_8)
+			.withContentType("application/json");
+		
+		JWKSource<SecurityContext> failoverSource = JWKSourceBuilder.create(new URL("http://localhost:" + port() + "/failover/jwks.json"))
+			.build();
+		
+		JWKSource<SecurityContext> source = JWKSourceBuilder.create(jwkSetURL)
+			.failover(failoverSource)
+			.build();
+		
+		// Retrieve and cache
+		List<JWK> jwks = source.get(new JWKSelector(new JWKMatcher.Builder().keyID(EC_JWK_1.getKeyID()).build()), null);
+		assertEquals(Collections.singletonList(EC_JWK_1), jwks);
+		
+		// Return from cache
+		jwks = source.get(new JWKSelector(new JWKMatcher.Builder().keyID(EC_JWK_1.getKeyID()).build()), CONTEXT);
+		assertEquals(Collections.singletonList(EC_JWK_1), jwks);
+		
+		// New kid, primary URL returns HTTP 500, resort to failover URL
+		jwks = source.get(new JWKSelector(new JWKMatcher.Builder().keyID(EC_JWK_2.getKeyID()).build()), null);
+		assertEquals(Collections.singletonList(EC_JWK_2), jwks);
+	}
+	
+	
+	@Test
 	public void healthReportListener() throws Exception {
 		
 		onRequest()

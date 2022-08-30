@@ -389,15 +389,13 @@ public class JWKSourceBuilder<C extends SecurityContext> {
 	 * Enables single retrial to retrieve the JWK set to work around
 	 * transient network issues.
 	 *
-	 * @param enable        {@code true} to enable single retrial.
 	 * @param eventListener The event listener, {@code null} if not
 	 *                      specified.
 	 *
 	 * @return This builder.
 	 */
-	public JWKSourceBuilder<C> retrying(final boolean enable,
-					    final EventListener<RetryingJWKSetSource<C>, C> eventListener) {
-		this.retrying = enable;
+	public JWKSourceBuilder<C> retrying(final EventListener<RetryingJWKSetSource<C>, C> eventListener) {
+		this.retrying = true;
 		this.retryingEventListener = eventListener;
 		return this;
 	}

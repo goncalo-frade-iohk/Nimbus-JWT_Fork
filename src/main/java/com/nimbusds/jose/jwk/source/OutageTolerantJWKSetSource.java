@@ -18,6 +18,8 @@
 package com.nimbusds.jose.jwk.source;
 
 
+import java.util.Objects;
+
 import net.jcip.annotations.ThreadSafe;
 
 import com.nimbusds.jose.KeySourceException;
@@ -36,7 +38,7 @@ import com.nimbusds.jose.util.events.EventListener;
  *
  * @author Thomas Rørvik Skjølberg
  * @author Vladimir Dzhuvinov
- * @version 2022-08-28
+ * @version 2022-08-30
  */
 @ThreadSafe
 public class OutageTolerantJWKSetSource<C extends SecurityContext> extends AbstractCachingJWKSetSource<C> {
@@ -47,11 +49,28 @@ public class OutageTolerantJWKSetSource<C extends SecurityContext> extends Abstr
 	 */
 	public static class OutageEvent<C extends SecurityContext> extends AbstractJWKSetSourceEvent<OutageTolerantJWKSetSource<C>, C> {
 		
+		private final Exception exception;
+		
 		private final long remainingTime;
 		
-		private OutageEvent(final OutageTolerantJWKSetSource<C> source, final long remainingTime, final C context) {
+		private OutageEvent(final OutageTolerantJWKSetSource<C> source,
+				    final Exception exception,
+				    final long remainingTime,
+				    final C context) {
 			super(source, context);
+			Objects.requireNonNull(exception);
+			this.exception = exception;
 			this.remainingTime = remainingTime;
+		}
+		
+		
+		/**
+		 * Returns the exception that caused the retrial.
+		 *
+		 * @return The exception.
+		 */
+		public Exception getException() {
+			return exception;
 		}
 		
 		
@@ -95,20 +114,20 @@ public class OutageTolerantJWKSetSource<C extends SecurityContext> extends Abstr
 			cacheJWKSet(jwkSet, currentTime);
 			return jwkSet;
 			
-		} catch (JWKSetUnavailableException e1) {
-			if (!forceReload) {
+		} catch (JWKSetUnavailableException e) {
+			if (! forceReload) {
 				// return the previously cached JWT set
 				CachedObject<JWKSet> cache = getCachedJWKSet();
 				if (cache != null && cache.isValid(currentTime)) {
 					long remainingTime = cache.getExpirationTime() - currentTime; // in millis
 					if (eventListener != null) {
-						eventListener.notify(new OutageEvent<>(this, remainingTime, context));
+						eventListener.notify(new OutageEvent<>(this, e, remainingTime, context));
 					}
 					return cache.get();
 				}
 			}
 
-			throw e1;
+			throw e;
 		}
 	}
 }

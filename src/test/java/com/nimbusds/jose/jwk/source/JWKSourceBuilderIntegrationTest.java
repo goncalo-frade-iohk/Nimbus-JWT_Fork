@@ -143,8 +143,7 @@ public class JWKSourceBuilderIntegrationTest {
 		final List<Event<RetryingJWKSetSource<SecurityContext>, SecurityContext>> retryingEvents = new LinkedList<>();
 		
 		JWKSource<SecurityContext> source = JWKSourceBuilder.create(jwkSetURL)
-			.retrying(true,
-				new EventListener<RetryingJWKSetSource<SecurityContext>, SecurityContext>() {
+			.retrying(new EventListener<RetryingJWKSetSource<SecurityContext>, SecurityContext>() {
 				@Override
 				public void notify(Event<RetryingJWKSetSource<SecurityContext>, SecurityContext> event) {
 					retryingEvents.add(event);
@@ -159,6 +158,61 @@ public class JWKSourceBuilderIntegrationTest {
 		
 		assertTrue(retryingEvents.get(0) instanceof RetryingJWKSetSource.RetrialEvent);
 		assertEquals(1, retryingEvents.size());
+	}
+	
+	
+	@Test
+	public void outage() throws KeySourceException {
+		
+		long outageTTL = JWKSourceBuilder.DEFAULT_CACHE_TIME_TO_LIVE * 10;
+		
+		onRequest()
+			.havingMethodEqualTo("GET")
+			.havingPathEqualTo("/jwks.json")
+		.respond()
+			.withStatus(200)
+			.withBody(JWK_SET_1.toString())
+			.withEncoding(StandardCharset.UTF_8)
+			.withContentType("application/json");
+		
+		final List<Event<OutageTolerantJWKSetSource<SecurityContext>, SecurityContext>> outageEvents = new LinkedList<>();
+		
+		JWKSource<SecurityContext> source = JWKSourceBuilder.create(jwkSetURL)
+			.outageTolerant(
+				outageTTL,
+				new EventListener<OutageTolerantJWKSetSource<SecurityContext>, SecurityContext>() {
+					@Override
+					public void notify(Event<OutageTolerantJWKSetSource<SecurityContext>, SecurityContext> event) {
+						outageEvents.add(event);
+					}
+				}
+			)
+			.build();
+		
+		// Retrieve and cache
+		List<JWK> jwks = source.get(new JWKSelector(new JWKMatcher.Builder().keyID(EC_JWK_1.getKeyID()).build()), null);
+		assertEquals(Collections.singletonList(EC_JWK_1), jwks);
+		
+		assertTrue(outageEvents.isEmpty());
+		
+		closeJadler();
+		
+		// Return from cache
+		jwks = source.get(new JWKSelector(new JWKMatcher.Builder().keyID(EC_JWK_1.getKeyID()).build()), CONTEXT);
+		assertEquals(Collections.singletonList(EC_JWK_1), jwks);
+		
+		assertTrue(outageEvents.isEmpty());
+		
+		// Unknown kid
+		jwks = source.get(new JWKSelector(new JWKMatcher.Builder().keyID("no-such-kid").build()), null);
+		assertTrue(jwks.isEmpty());
+		
+		assertTrue(outageEvents.get(0) instanceof OutageTolerantJWKSetSource.OutageEvent);
+		OutageTolerantJWKSetSource.OutageEvent outageEvent = (OutageTolerantJWKSetSource.OutageEvent) outageEvents.get(0);
+		assertTrue(outageEvent.getException() instanceof KeySourceException);
+		assertEquals("Couldn't retrieve JWK set from URL: Connection refused (Connection refused)", outageEvent.getException().getMessage());
+		assertTrue(0 < outageEvent.getRemainingTime() && outageEvent.getRemainingTime() < outageTTL);
+		assertEquals(1, outageEvents.size());
 	}
 	
 	
@@ -233,11 +287,8 @@ public class JWKSourceBuilderIntegrationTest {
 		// New kid, requires update, HTTP 404
 		try {
 			source.get(new JWKSelector(new JWKMatcher.Builder().keyID(EC_JWK_2.getKeyID()).build()), CONTEXT);
-			System.out.println(lastReport.get().getHealthStatus());
 			fail();
 		} catch (KeySourceException e) {
-			
-			
 			
 			assertEquals("Couldn't retrieve JWK set from URL: http://localhost:" + port() + "/jwks.json", e.getMessage());
 			

@@ -112,6 +112,7 @@ public class OutageTolerantJWKSetSourceTest extends AbstractWrappedJWKSetSourceT
 		assertEquals(jwkSet, source.getJWKSet(false, System.currentTimeMillis(), context));
 		verify(wrappedJWKSetSource, times(2)).getJWKSet(eq(false), anyLong(), anySecurityContext());
 		assertEquals(1, events.size());
+		assertEquals("TEST", events.get(0).getException().getMessage());
 		assertTrue(events.get(0).getRemainingTime() > 0L);
 	}
 

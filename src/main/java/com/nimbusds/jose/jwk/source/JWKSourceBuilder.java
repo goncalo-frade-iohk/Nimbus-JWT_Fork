@@ -46,7 +46,7 @@ import com.nimbusds.jose.util.health.HealthReportListener;
  *
  * @author Thomas Rørvik Skjølberg
  * @author Vladimir Dzhuvinov
- * @version 2022-08-29
+ * @version 2022-08-30
  */
 public class JWKSourceBuilder<C extends SecurityContext> {
 	
@@ -155,21 +155,21 @@ public class JWKSourceBuilder<C extends SecurityContext> {
 	private EventListener<CachingJWKSetSource<C>, C> refreshAheadCachingEventListener;
 
 	// rate limiting (retry on network error will not count against this)
-	protected boolean rateLimited = true;
-	protected long minTimeInterval = DEFAULT_RATE_LIMIT_MIN_INTERVAL;
+	private boolean rateLimited = true;
+	private long minTimeInterval = DEFAULT_RATE_LIMIT_MIN_INTERVAL;
 	private EventListener<RateLimitedJWKSetSource<C>, C> rateLimitedEventListener;
 
 	// retrying
-	protected boolean retrying = false;
+	private boolean retrying = false;
 	private EventListener<RetryingJWKSetSource<C>, C> retryingEventListener;
 
 	// outage
-	protected boolean outageTolerant = false;
-	protected long outageCacheTimeToLive = -1L;
+	private boolean outageTolerant = false;
+	private long outageCacheTimeToLive = -1L;
 	private EventListener<OutageTolerantJWKSetSource<C>, C> outageEventListener;
 
 	// health status reporting
-	protected HealthReportListener<JWKSetSourceWithHealthStatusReporting<C>, C> healthReportListener;
+	private HealthReportListener<JWKSetSourceWithHealthStatusReporting<C>, C> healthReportListener;
 
 	// failover
 	protected JWKSource<C> failover;

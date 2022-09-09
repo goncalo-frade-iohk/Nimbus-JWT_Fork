@@ -23,6 +23,7 @@ import java.text.ParseException;
 import java.util.*;
 
 import junit.framework.TestCase;
+import org.jose4j.json.internal.json_simple.JSONObject;
 import org.junit.Assert;
 
 import com.nimbusds.jose.HeaderParameterNames;
@@ -34,7 +35,7 @@ import com.nimbusds.jwt.util.DateUtilsTest;
  * Tests the JSON object utilities.
  *
  * @author Vladimir Dzhuvinov
- * @version 2022-08-26
+ * @version 2022-09-09
  */
 public class JSONObjectUtilsTest extends TestCase {
 	
@@ -865,5 +866,26 @@ public class JSONObjectUtilsTest extends TestCase {
 		
 		jsonObject = JSONObjectUtils.parse(json);
 		assertEquals(ts, JSONObjectUtils.getLong(jsonObject, "now"));
+	}
+	
+	
+	public void testSerialize_escape() {
+	
+		Map<String, Object> jsonObject = JSONObjectUtils.newJSONObject();
+		jsonObject.put("key", "\"\\<>&'=");
+		assertEquals("{\"key\":\"\\\"\\\\<>&'=\"}", JSONObjectUtils.toJSONString(jsonObject));
+	}
+	
+	
+	public void testBase64Value() throws ParseException {
+		
+		Base64 base64 = new Base64("xHPBC7VaQxq6AAvrBQN4YQ==");
+		Map<String, Object> o = new HashMap<>();
+		o.put("b64", base64.toString());
+		
+		String json = JSONObjectUtils.toJSONString(o);
+		o = JSONObjectUtils.parse(json);
+		
+		assertEquals(base64.toString(), o.get("b64"));
 	}
 }

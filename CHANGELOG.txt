@@ -1454,3 +1454,6 @@ version 9.24.2 (2022-08-19)
 
 version 9.24.3 (2022-08-26)
     * Updates Google Tink to 1.7.0.
+
+version 9.24.4 (2022-09-09)
+    * Fixes GSon serialisation of HTML and XML control characters (iss #489).

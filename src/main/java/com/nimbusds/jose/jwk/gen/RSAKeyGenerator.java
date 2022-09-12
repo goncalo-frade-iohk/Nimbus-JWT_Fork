@@ -89,7 +89,12 @@ public class RSAKeyGenerator extends JWKGenerator<RSAKey> {
 			} else {
 				generator = KeyPairGenerator.getInstance("RSA");
 			}
-			generator.initialize(size);
+			if (secureRandom != null) {
+				generator.initialize(size, secureRandom);
+			} else {
+				// The default random gen
+				generator.initialize(size);
+			}
 		} catch (NoSuchAlgorithmException e) {
 			throw new JOSEException(e.getMessage(), e);
 		}

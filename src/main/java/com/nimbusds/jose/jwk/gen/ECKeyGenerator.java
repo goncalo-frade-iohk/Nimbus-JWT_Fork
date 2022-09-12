@@ -82,7 +82,12 @@ public class ECKeyGenerator extends JWKGenerator<ECKey> {
 			} else {
 				generator = KeyPairGenerator.getInstance("EC");
 			}
-			generator.initialize(ecSpec);
+			if (secureRandom != null) {
+				generator.initialize(ecSpec, secureRandom);
+			} else {
+				// The default random gen
+				generator.initialize(ecSpec);
+			}
 		} catch (NoSuchAlgorithmException | InvalidAlgorithmParameterException e) {
 			throw new JOSEException(e.getMessage(), e);
 		}

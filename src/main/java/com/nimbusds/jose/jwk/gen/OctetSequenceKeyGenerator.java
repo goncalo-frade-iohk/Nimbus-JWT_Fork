@@ -44,14 +44,7 @@ public class OctetSequenceKeyGenerator extends JWKGenerator<OctetSequenceKey> {
 	 * The key size, in bits.
 	 */
 	private final int size;
-	
-	
-	/**
-	 * The secure random generator to use, {@code null} to use the default
-	 * one.
-	 */
-	private SecureRandom secureRandom;
-	
+
 	
 	/**
 	 * Creates a new octet sequence JWK generator.
@@ -68,22 +61,7 @@ public class OctetSequenceKeyGenerator extends JWKGenerator<OctetSequenceKey> {
 		}
 		this.size = size;
 	}
-	
-	
-	/**
-	 * Sets the secure random generator to use.
-	 *
-	 * @param secureRandom The secure random generator to use, {@code null}
-	 *                     to use the default one.
-	 *
-	 * @return This generator.
-	 */
-	public OctetSequenceKeyGenerator secureRandom(final SecureRandom secureRandom) {
-		
-		this.secureRandom = secureRandom;
-		return this;
-	}
-	
+
 	
 	@Override
 	public OctetSequenceKey generate()

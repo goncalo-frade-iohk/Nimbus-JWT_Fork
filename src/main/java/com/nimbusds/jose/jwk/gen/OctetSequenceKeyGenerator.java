@@ -29,7 +29,8 @@ import com.nimbusds.jose.util.Base64URL;
  * Octet sequence JSON Web Key (JWK) generator.
  *
  * @author Vladimir Dzhuvinov
- * @version 2018-07-20
+ * @author Justin Cranford
+ * @version 2022-09-13
  */
 public class OctetSequenceKeyGenerator extends JWKGenerator<OctetSequenceKey> {
 	

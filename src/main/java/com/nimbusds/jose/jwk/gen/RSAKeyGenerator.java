@@ -31,7 +31,8 @@ import com.nimbusds.jose.jwk.RSAKey;
  * RSA JSON Web Key (JWK) generator.
  *
  * @author Vladimir Dzhuvinov
- * @version 2019-04-17
+ * @author Justin Cranford
+ * @version 2022-09-13
  */
 public class RSAKeyGenerator extends JWKGenerator<RSAKey> {
 	

@@ -43,7 +43,8 @@ import com.nimbusds.jose.jwk.ECKey;
  * </ul>
  *
  * @author Vladimir Dzhuvinov
- * @version 2019-04-17
+ * @author Justin Cranford
+ * @version 2022-09-13
  */
 public class ECKeyGenerator extends JWKGenerator<ECKey> {
 	

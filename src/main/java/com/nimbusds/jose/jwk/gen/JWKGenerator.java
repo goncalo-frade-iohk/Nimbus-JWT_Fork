@@ -34,7 +34,8 @@ import com.nimbusds.jose.jwk.KeyUse;
  * Abstract JWK generator.
  *
  * @author Vladimir Dzhuvinov
- * @version 2018-09-07
+ * @author Justin Cranford
+ * @version 2022-09-13
  */
 public abstract class JWKGenerator<T extends JWK> {
 	

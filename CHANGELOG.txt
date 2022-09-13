@@ -1457,3 +1457,7 @@ version 9.24.3 (2022-08-26)
 
 version 9.24.4 (2022-09-09)
     * Fixes GSon serialisation of HTML and XML control characters (iss #489).
+
+version 9.25 (2022-09-13)
+    * Adds support to use a SecureRandom in RSAKeyGenerator.generate() and
+      ECKeyGenerator.generate().

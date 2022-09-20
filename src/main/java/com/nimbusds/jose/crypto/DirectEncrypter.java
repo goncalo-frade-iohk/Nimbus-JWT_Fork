@@ -21,15 +21,14 @@ package com.nimbusds.jose.crypto;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 
-import com.nimbusds.jose.crypto.impl.AlgorithmSupportMessage;
-import com.nimbusds.jose.crypto.impl.ContentCryptoProvider;
-import com.nimbusds.jose.crypto.impl.DirectCryptoProvider;
 import net.jcip.annotations.ThreadSafe;
 
 import com.nimbusds.jose.*;
+import com.nimbusds.jose.crypto.impl.AlgorithmSupportMessage;
+import com.nimbusds.jose.crypto.impl.ContentCryptoProvider;
+import com.nimbusds.jose.crypto.impl.DirectCryptoProvider;
 import com.nimbusds.jose.jwk.OctetSequenceKey;
 import com.nimbusds.jose.util.Base64URL;
-import com.nimbusds.jose.util.ByteUtils;
 
 
 /**
@@ -63,7 +62,7 @@ import com.nimbusds.jose.util.ByteUtils;
  * </ul>
  *
  * @author Vladimir Dzhuvinov
- * @version 2017-06-01
+ * @version 2022-09-20
  */
 @ThreadSafe
 public class DirectEncrypter extends DirectCryptoProvider implements JWEEncrypter {
@@ -131,13 +130,6 @@ public class DirectEncrypter extends DirectCryptoProvider implements JWEEncrypte
 
 		if (! alg.equals(JWEAlgorithm.DIR)) {
 			throw new JOSEException(AlgorithmSupportMessage.unsupportedJWEAlgorithm(alg, SUPPORTED_ALGORITHMS));
-		}
-
-		// Check key length matches encryption method
-		EncryptionMethod enc = header.getEncryptionMethod();
-
-		if (enc.cekBitLength() != ByteUtils.safeBitLength(getKey().getEncoded())) {
-			throw new KeyLengthException(enc.cekBitLength(), enc);
 		}
 
 		final Base64URL encryptedKey = null; // The second JWE part

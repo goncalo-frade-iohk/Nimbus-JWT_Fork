@@ -18,25 +18,27 @@
 package com.nimbusds.jose.crypto;
 
 
+import java.text.ParseException;
 import java.util.Collections;
 import java.util.HashSet;
 import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 
+import junit.framework.TestCase;
+
 import com.nimbusds.jose.*;
 import com.nimbusds.jose.crypto.bc.BouncyCastleProviderSingleton;
 import com.nimbusds.jose.jwk.OctetSequenceKey;
 import com.nimbusds.jose.util.ByteUtils;
 import com.nimbusds.jwt.JWTClaimNames;
-import junit.framework.TestCase;
 
 
 /**
  * Tests direct JWE encryption and decryption.
  *
  * @author Vladimir Dzhuvinov
- * @version 2018-01-11
+ * @version 2022-09-20
  */
 public class DirectCryptoTest extends TestCase {
 
@@ -654,5 +656,90 @@ public class DirectCryptoTest extends TestCase {
 		jweObject = JWEObject.parse(jweObject.serialize());
 		jweObject.decrypt(new DirectDecrypter(secretKey));
 		assertEquals(plainText, jweObject.getPayload().toString());
+	}
+	
+	
+	// https://bitbucket.org/connect2id/nimbus-jose-jwt/issues/490/jwe-with-shared-key-support-for-android
+	public void testEmulateHSMKey_AxxxGCM() throws JOSEException, ParseException {
+		
+		final SecretKey secretKey = new SecretKeySpec(key128, "AES");
+		
+		for (EncryptionMethod enc: EncryptionMethod.Family.AES_GCM) {
+			
+			SecretKey hsmKey = new SecretKey() {
+				
+				int getEncodedCall = 0;
+				
+				
+				@Override
+				public String getAlgorithm() {
+					return secretKey.getAlgorithm();
+				}
+				
+				
+				@Override
+				public String getFormat() {
+					return secretKey.getFormat();
+				}
+				
+				
+				@Override
+				public byte[] getEncoded() {
+					
+					int num = getEncodedCall++;
+					
+					switch (num) {
+						case 0:
+							// DirectCryptoProvider.getCompatibleEncryptionMethods
+							return new byte[]{};
+						case 1:
+							// ContentCryptoProvider.checkCEKLength
+							return new byte[]{};
+						case 2:
+							return secretKey.getEncoded();
+						case 3:
+							// DirectCryptoProvider.getCompatibleEncryptionMethods
+							return new byte[]{};
+						case 4:
+							// ContentCryptoProvider.checkCEKLength
+							return new byte[]{};
+						case 5:
+							return secretKey.getEncoded();
+						default:
+							throw new RuntimeException("Num call: " + num);
+					}
+				}
+			};
+			
+			
+			JWEHeader header = new JWEHeader(JWEAlgorithm.DIR, enc);
+			Payload payload = new Payload("Hello world!");
+			
+			JWEObject jweObject = new JWEObject(header, payload);
+			
+			DirectEncrypter encrypter = new DirectEncrypter(hsmKey);
+			assertTrue(encrypter.supportedEncryptionMethods().contains(EncryptionMethod.A128GCM));
+			assertTrue(encrypter.supportedEncryptionMethods().contains(EncryptionMethod.A192GCM));
+			assertTrue(encrypter.supportedEncryptionMethods().contains(EncryptionMethod.A256GCM));
+			assertEquals(3, encrypter.supportedEncryptionMethods().size());
+			
+			jweObject.encrypt(encrypter);
+			
+			assertEquals(JWEObject.State.ENCRYPTED, jweObject.getState());
+			
+			String jwe = jweObject.serialize();
+			
+			jweObject = JWEObject.parse(jwe);
+			
+			DirectDecrypter decrypter = new DirectDecrypter(hsmKey);
+			assertTrue(decrypter.supportedEncryptionMethods().contains(EncryptionMethod.A128GCM));
+			assertTrue(decrypter.supportedEncryptionMethods().contains(EncryptionMethod.A192GCM));
+			assertTrue(decrypter.supportedEncryptionMethods().contains(EncryptionMethod.A256GCM));
+			assertEquals(3, decrypter.supportedEncryptionMethods().size());
+			
+			jweObject.decrypt(decrypter);
+			
+			assertEquals(payload.toString(), jweObject.getPayload().toString());
+		}
 	}
 }

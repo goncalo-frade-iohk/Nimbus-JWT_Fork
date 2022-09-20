@@ -54,7 +54,7 @@ import com.nimbusds.jose.util.ByteUtils;
  * </ul>
  * 
  * @author Vladimir Dzhuvinov
- * @version 2015-06-29
+ * @version 2022-09-20
  */
 public abstract class DirectCryptoProvider extends BaseJWEProvider {
 
@@ -83,16 +83,22 @@ public abstract class DirectCryptoProvider extends BaseJWEProvider {
 	 * Returns the compatible encryption methods for the specified Content
 	 * Encryption Key (CEK) length.
 	 *
-	 * @param cekLength The CEK length in bits.
+	 * @param cekBitLength The CEK length in bits.
 	 *
 	 * @return The compatible encryption methods.
 	 *
 	 * @throws KeyLengthException If the CEK length is not compatible.
 	 */
-	private static Set<EncryptionMethod> getCompatibleEncryptionMethods(final int cekLength)
+	private static Set<EncryptionMethod> getCompatibleEncryptionMethods(final int cekBitLength)
 		throws KeyLengthException {
 
-		Set<EncryptionMethod> encs = ContentCryptoProvider.COMPATIBLE_ENCRYPTION_METHODS.get(cekLength);
+		if (cekBitLength == 0) {
+			// Suspect HSM that doesn't expose key material, return all supported enc AES/GCM methods
+			// https://bitbucket.org/connect2id/nimbus-jose-jwt/issues/490/jwe-with-shared-key-support-for-android
+			return EncryptionMethod.Family.AES_GCM;
+		}
+		
+		Set<EncryptionMethod> encs = ContentCryptoProvider.COMPATIBLE_ENCRYPTION_METHODS.get(cekBitLength);
 
 		if (encs == null) {
 			throw new KeyLengthException("The Content Encryption Key length must be 128 bits (16 bytes), 192 bits (24 bytes), 256 bits (32 bytes), 384 bits (48 bytes) or 512 bites (64 bytes)");

@@ -1461,3 +1461,7 @@ version 9.24.4 (2022-09-09)
 version 9.25 (2022-09-13)
     * Adds support to use a SecureRandom in RSAKeyGenerator.generate() and
       ECKeyGenerator.generate().
+
+version 9.25.1 (2022-09-20)
+    * Updates the DirectCryptoProvider (alg=dir) to support HSM-based SecretKey
+      instances with A128GCM, A192GCM and A256GCM (iss #490).

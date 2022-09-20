@@ -35,7 +35,7 @@ import com.nimbusds.jose.util.IntegerOverflowException;
  * JWE content encryption / decryption provider.
  *
  * @author Vladimir Dzhuvinov
- * @version 2017-06-01
+ * @version 2022-09-20
  */
 public class ContentCryptoProvider {
 
@@ -128,13 +128,22 @@ public class ContentCryptoProvider {
 	 */
 	private static void checkCEKLength(final SecretKey cek, final EncryptionMethod enc)
 		throws KeyLengthException {
-
+		
+		final int cekBitLength;
 		try {
-			if (enc.cekBitLength() != ByteUtils.safeBitLength(cek.getEncoded())) {
-				throw new KeyLengthException("The Content Encryption Key (CEK) length for " + enc + " must be " + enc.cekBitLength() + " bits");
-			}
+			cekBitLength = ByteUtils.safeBitLength(cek.getEncoded());
 		} catch (IntegerOverflowException e) {
 			throw new KeyLengthException("The Content Encryption Key (CEK) is too long: " + e.getMessage());
+		}
+		
+		if (cekBitLength == 0) {
+			// Suspect HSM that doesn't expose key material
+			// https://bitbucket.org/connect2id/nimbus-jose-jwt/issues/490/jwe-with-shared-key-support-for-android
+			return;
+		}
+		
+		if (enc.cekBitLength() != cekBitLength) {
+			throw new KeyLengthException("The Content Encryption Key (CEK) length for " + enc + " must be " + enc.cekBitLength() + " bits");
 		}
 	}
 

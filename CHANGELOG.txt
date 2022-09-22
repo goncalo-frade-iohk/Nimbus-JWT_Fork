@@ -1465,3 +1465,7 @@ version 9.25 (2022-09-13)
 version 9.25.1 (2022-09-20)
     * Updates the DirectCryptoProvider (alg=dir) to support HSM-based SecretKey
       instances with A128GCM, A192GCM and A256GCM (iss #490).
+
+version 9.25.2 (2022-09-22)
+    * KeyUtils.toAESKey must not recreate the SecretKey but wrap it, to avoid
+      calling its getEncoded method (iss #490).

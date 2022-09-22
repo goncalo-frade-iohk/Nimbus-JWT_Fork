@@ -19,14 +19,13 @@ package com.nimbusds.jose.util;
 
 
 import javax.crypto.SecretKey;
-import javax.crypto.spec.SecretKeySpec;
 
 
 /**
  * JCA key utilities.
  *
  * @author Vladimir Dzhuvinov
- * @version 2018-02-11
+ * @version 2022-09-22
  */
 public class KeyUtils {
 	
@@ -45,7 +44,24 @@ public class KeyUtils {
 			return null;
 		}
 		
-		return new SecretKeySpec(secretKey.getEncoded(), "AES");
+		return new SecretKey() {
+			@Override
+			public String getAlgorithm() {
+				return "AES";
+			}
+			
+			
+			@Override
+			public String getFormat() {
+				return secretKey.getFormat();
+			}
+			
+			
+			@Override
+			public byte[] getEncoded() {
+				return secretKey.getEncoded();
+			}
+		};
 	}
 	
 	

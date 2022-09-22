@@ -18,9 +18,12 @@
 package com.nimbusds.jose.util;
 
 
+import java.security.SecureRandom;
 import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
+import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.SecretKeySpec;
+import javax.security.auth.kerberos.KerberosKey;
 
 import static org.junit.Assert.assertArrayEquals;
 
@@ -54,5 +57,40 @@ public class KeyUtilsTest extends TestCase {
 	public void testToAESSecretKey_null() {
 		
 		assertNull(KeyUtils.toAESKey(null));
+	}
+	
+	
+	public void testToAESSecretKey_mustNotCallUnderlyingGetEncoded() {
+		
+		SecretKey originalKey = new SecretKey() {
+			@Override
+			public String getAlgorithm() {
+				return "SOME";
+			}
+			
+			
+			@Override
+			public String getFormat() {
+				return "format";
+			}
+			
+			
+			@Override
+			public byte[] getEncoded() {
+				throw new RuntimeException();
+			}
+		};
+		
+		SecretKey out = KeyUtils.toAESKey(originalKey);
+		
+		assertEquals("AES", out.getAlgorithm());
+		assertEquals("format", out.getFormat());
+		
+		try {
+			out.getEncoded();
+			fail();
+		} catch (RuntimeException e) {
+			// ok
+		}
 	}
 }

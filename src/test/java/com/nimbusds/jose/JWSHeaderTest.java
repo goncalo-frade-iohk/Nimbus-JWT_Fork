@@ -39,7 +39,7 @@ import com.nimbusds.jose.util.JSONObjectUtils;
  * Tests JWS header parsing and serialisation.
  *
  * @author Vladimir Dzhuvinov
- * @version 2022-03-07
+ * @version 2022-09-22
  */
 public class JWSHeaderTest extends TestCase {
 	
@@ -645,6 +645,25 @@ public class JWSHeaderTest extends TestCase {
 		} catch (ParseException e) {
 			assertEquals("Non-public key in jwk header parameter", e.getMessage());
 		}
+	}
+	
+	
+	public void testParseMissingRequiredHeader() {
+		
+		try {
+			JWSHeader.parse("{}");
+			fail();
+		} catch (ParseException e) {
+			assertEquals("Missing \"alg\" in header JSON object", e.getMessage());
+		}
+	}
+	
+	
+	public void testParseNullOptionalHeader() throws ParseException {
+		
+		JWSHeader header = JWSHeader.parse("{\"alg\":\"RS256\",\"kid\":null}");
+		
+		assertNull(header.getKeyID());
 	}
 }
 

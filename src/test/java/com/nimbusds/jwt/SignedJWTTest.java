@@ -205,4 +205,21 @@ public class SignedJWTTest extends TestCase {
 			assertEquals("Payload of JWS object is not a valid JSON object", e.getMessage());
 		}
 	}
+	
+	
+	public void testParseWithMissingRequiredHeader() {
+		
+		Base64URL header = Base64URL.encode("{}");
+		Base64URL payload = new JWTClaimsSet.Builder().subject("alice").build().toPayload().toBase64URL();
+		Base64URL signature = Base64URL.encode("invalid-signature");
+		
+		String illegalJWT = header + "." + payload + "." + signature;
+		
+		try {
+			SignedJWT.parse(illegalJWT);
+			fail();
+		} catch (ParseException e) {
+			assertEquals("Invalid JWS header: Missing \"alg\" in header JSON object", e.getMessage());
+		}
+	}
 }

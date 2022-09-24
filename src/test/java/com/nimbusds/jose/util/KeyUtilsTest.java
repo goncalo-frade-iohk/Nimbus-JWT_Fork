@@ -18,14 +18,12 @@
 package com.nimbusds.jose.util;
 
 
-import java.security.SecureRandom;
 import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
-import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.SecretKeySpec;
-import javax.security.auth.kerberos.KerberosKey;
 
 import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertNotEquals;
 
 import junit.framework.TestCase;
 
@@ -33,7 +31,7 @@ import junit.framework.TestCase;
 public class KeyUtilsTest extends TestCase {
 	
 	
-	public void testToAESSecretKey()
+	public void testToAESSecretKey_wrap()
 		throws Exception {
 		
 		KeyGenerator gen = KeyGenerator.getInstance("AES");
@@ -51,6 +49,19 @@ public class KeyUtilsTest extends TestCase {
 		assertEquals(128, ByteUtils.bitLength(key.getEncoded()));
 		assertArrayEquals(key.getEncoded(), aesKey.getEncoded());
 		assertEquals("AES", aesKey.getAlgorithm());
+		
+		assertNotEquals(aesKey, key);
+	}
+	
+	
+	public void testToAESSecretKey_returnUnmodified()
+		throws Exception {
+		
+		KeyGenerator gen = KeyGenerator.getInstance("AES");
+		gen.init(128);
+		SecretKey key = gen.generateKey();
+		
+		assertEquals(key, KeyUtils.toAESKey(key));
 	}
 	
 	
@@ -92,5 +103,7 @@ public class KeyUtilsTest extends TestCase {
 		} catch (RuntimeException e) {
 			// ok
 		}
+		
+		assertNotSame(originalKey, out);
 	}
 }

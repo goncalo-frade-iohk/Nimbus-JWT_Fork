@@ -1469,3 +1469,7 @@ version 9.25.1 (2022-09-20)
 version 9.25.2 (2022-09-22)
     * KeyUtils.toAESKey must not recreate the SecretKey but wrap it, to avoid
       calling its getEncoded method (iss #490).
+
+version 9.25.3 (2022-09-24)
+    * KeyUtils.toAESKey must return the input key unmodified if its algorithm
+      is AES (iss #490).

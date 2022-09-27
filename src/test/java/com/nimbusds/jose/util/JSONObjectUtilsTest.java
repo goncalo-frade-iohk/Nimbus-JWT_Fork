@@ -35,7 +35,7 @@ import com.nimbusds.jwt.util.DateUtilsTest;
  * Tests the JSON object utilities.
  *
  * @author Vladimir Dzhuvinov
- * @version 2022-09-09
+ * @version 2022-09-27
  */
 public class JSONObjectUtilsTest extends TestCase {
 	
@@ -44,8 +44,30 @@ public class JSONObjectUtilsTest extends TestCase {
 		
 		assertTrue(JSONObjectUtils.parse("{}").isEmpty());
 	}
-
-
+	
+	
+	public void testParseFromEmptyString() {
+		
+		try {
+			JSONObjectUtils.parse("");
+			fail();
+		} catch (ParseException e) {
+			assertEquals("Invalid JSON object", e.getMessage());
+		}
+	}
+	
+	
+	public void testParseFromStringEntity() {
+		
+		try {
+			JSONObjectUtils.parse("abc");
+			fail();
+		} catch (ParseException e) {
+			assertEquals("Invalid JSON: java.lang.IllegalStateException: Expected BEGIN_OBJECT but was STRING at line 1 column 1 path $", e.getMessage());
+		}
+	}
+	
+	
 	public void testParseTrailingWhiteSpace()
 		throws Exception {
 
@@ -55,7 +77,7 @@ public class JSONObjectUtilsTest extends TestCase {
 	}
 	
 	
-	public void testParseTrailingNonWhiteSpaceChar() {
+	public void testParseObjectTrailingNonWhiteSpaceChar() {
 		
 		try {
 			JSONObjectUtils.parse("{}a");
@@ -66,7 +88,7 @@ public class JSONObjectUtilsTest extends TestCase {
 	}
 	
 	
-	public void testParseDuplicateMember() {
+	public void testParseObjectDuplicateMember() {
 		
 		try {
 			JSONObjectUtils.parse("{\"iat\":1661335547,\"iat\":1661335547}");

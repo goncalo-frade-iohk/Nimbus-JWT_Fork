@@ -1473,3 +1473,9 @@ version 9.25.2 (2022-09-22)
 version 9.25.3 (2022-09-24)
     * KeyUtils.toAESKey must return the input key unmodified if its algorithm
       is AES (iss #490).
+
+version 9.25.4 (2022-09-27)
+    * JSONObjectUtils.parse must throw ParseException on empty string (iss
+      #492).
+    * JWSObject.parse with empty signature must throw ParseException instead of
+      postpone error condition to signature validation (iss #493).

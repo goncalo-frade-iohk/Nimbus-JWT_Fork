@@ -113,6 +113,10 @@ public class JSONObjectUtils {
 	 */
 	public static Map<String, Object> parse(final String s, final int sizeLimit)
 		throws ParseException {
+		
+		if (s.trim().isEmpty()) {
+			throw new ParseException("Invalid JSON object", 0);
+		}
 
 		if (sizeLimit >= 0 && s.length() > sizeLimit) {
 			throw new ParseException("The parsed string is longer than the max accepted size of " + sizeLimit + " characters", 0);

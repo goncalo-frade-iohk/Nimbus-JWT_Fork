@@ -35,7 +35,7 @@ import com.nimbusds.jose.util.StandardCharset;
  * <p>This class is thread-safe.
  *
  * @author Vladimir Dzhuvinov
- * @version 2021-10-05
+ * @version 2022-09-27
  */
 @ThreadSafe
 public class JWSObject extends JOSEObject {
@@ -177,6 +177,10 @@ public class JWSObject extends JOSEObject {
 		if (thirdPart == null) {
 			throw new IllegalArgumentException("The third part must not be null");
 		}
+		if (thirdPart.toString().trim().isEmpty()) {
+			throw new ParseException("The signature must not be empty", 0);
+		}
+		
 		signature = thirdPart;
 		state.set(State.SIGNED); // but signature not verified yet!
 

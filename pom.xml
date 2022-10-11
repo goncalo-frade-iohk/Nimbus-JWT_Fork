@@ -157,6 +157,9 @@
                         <relocation>
                             <pattern>com.google.gson</pattern>
                             <shadedPattern>com.nimbusds.jose.shaded.gson</shadedPattern>
+                            <excludes>
+                                <exclude>module-info.class</exclude>
+                            </excludes>
                         </relocation>
                     </relocations>
                     <artifactSet>

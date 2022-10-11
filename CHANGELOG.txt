@@ -1479,3 +1479,7 @@ version 9.25.4 (2022-09-27)
       #492).
     * JWSObject.parse with empty signature must throw ParseException instead of
       postpone error condition to signature validation (iss #493).
+
+version 9.25.5 (2022-10-11)
+    * The module-info.class from the shaded com.google.gson package must not be
+      included in the JAR (iss #496).

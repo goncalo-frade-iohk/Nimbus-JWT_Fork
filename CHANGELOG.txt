@@ -1483,3 +1483,7 @@ version 9.25.4 (2022-09-27)
 version 9.25.5 (2022-10-11)
     * The module-info.class from the shaded com.google.gson package must not be
       included in the JAR (iss #496).
+
+version 9.25.6 (2022-10-13)
+    * Addresses incomplete #496 fix to remove module-info.class for the shaded
+      com.google.gson package (iss #497).

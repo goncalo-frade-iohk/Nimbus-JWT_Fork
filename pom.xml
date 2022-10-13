@@ -166,6 +166,9 @@
                         <includes>
                             <include>com.google.code.gson:gson</include>
                         </includes>
+                        <excludes>
+                            <exclude>module-info.class</exclude>
+                        </excludes>
                     </artifactSet>
                 </configuration>
                 <executions>

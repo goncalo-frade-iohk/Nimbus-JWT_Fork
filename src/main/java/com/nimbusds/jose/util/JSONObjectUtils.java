@@ -18,6 +18,7 @@
 package com.nimbusds.jose.util;
 
 
+import java.lang.reflect.Type;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.text.ParseException;
@@ -26,17 +27,30 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import net.minidev.json.JSONObject;
-import net.minidev.json.parser.JSONParser;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.ToNumberPolicy;
+import com.google.gson.internal.LinkedTreeMap;
+import com.google.gson.reflect.TypeToken;
 
 
 /**
  * JSON object helper methods.
  *
  * @author Vladimir Dzhuvinov
- * @version 2021-10-08
+ * @version 2022-08-19
  */
 public class JSONObjectUtils {
+	
+	
+	/**
+	 * The GSon instance for serialisation and parsing.
+	 */
+	private static final Gson GSON = new GsonBuilder()
+		.serializeNulls()
+		.setObjectToNumberStrategy(ToNumberPolicy.LONG_OR_DOUBLE)
+		.disableHtmlEscaping()
+		.create();
 
 
 	/**
@@ -99,26 +113,23 @@ public class JSONObjectUtils {
 	 */
 	public static Map<String, Object> parse(final String s, final int sizeLimit)
 		throws ParseException {
+		
+		if (s.trim().isEmpty()) {
+			throw new ParseException("Invalid JSON object", 0);
+		}
 
 		if (sizeLimit >= 0 && s.length() > sizeLimit) {
 			throw new ParseException("The parsed string is longer than the max accepted size of " + sizeLimit + " characters", 0);
 		}
 		
-		Object o;
+		Type mapType = new TypeToken<Map<String, Object>>(){}.getType();
+		
 		try {
-			o = new JSONParser(JSONParser.USE_HI_PRECISION_FLOAT | JSONParser.ACCEPT_TAILLING_SPACE).parse(s);
-		} catch (net.minidev.json.parser.ParseException e) {
-			throw new ParseException("Invalid JSON: " + e.getMessage(), 0);
+			return GSON.fromJson(s, mapType);
 		} catch (Exception e) {
-			throw new ParseException("Unexpected exception: " + e.getMessage(), 0);
+			throw new ParseException("Invalid JSON: " + e.getMessage(), 0);
 		} catch (StackOverflowError e) {
 			throw new ParseException("Excessive JSON object and / or array nesting", 0);
-		}
-
-		if (o instanceof JSONObject) {
-			return (JSONObject)o;
-		} else {
-			throw new ParseException("JSON entity is not an object", 0);
 		}
 	}
 
@@ -402,11 +413,30 @@ public class JSONObjectUtils {
 			return null;
 		}
 
-		try {
-			return jsonArray.toArray(new HashMap[0]);
-		} catch (ArrayStoreException e) {
-			throw new ParseException("JSON object member with key \"" + key + "\" is not an array of JSON objects", 0);
+		if (jsonArray.isEmpty()) {
+			return new HashMap[0];
 		}
+		
+		for (Object member: jsonArray) {
+			if (member == null) {
+				continue;
+			}
+			if (member instanceof HashMap) {
+				try {
+					return jsonArray.toArray(new HashMap[0]);
+				} catch (ArrayStoreException e) {
+					break; // throw parse exception below
+				}
+			}
+			if (member instanceof LinkedTreeMap) {
+				try {
+					return jsonArray.toArray(new LinkedTreeMap[0]);
+				} catch (ArrayStoreException e) {
+					break; // throw parse exception below
+				}
+			}
+		}
+		throw new ParseException("JSON object member with key \"" + key + "\" is not an array of JSON objects", 0);
 	}
 	
 	/**
@@ -494,7 +524,7 @@ public class JSONObjectUtils {
 	 * @return The JSON object as string.
 	 */
 	public static String toJSONString(final Map<String, ?> o) {
-		return JSONObject.toJSONString(o);
+		return GSON.toJson(o);
 	}
 
 	/**

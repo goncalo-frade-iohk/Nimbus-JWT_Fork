@@ -18,9 +18,13 @@
 package com.nimbusds.jose.jwk.gen;
 
 
+import java.security.SecureRandom;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import junit.framework.TestCase;
 
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
@@ -29,7 +33,6 @@ import com.nimbusds.jose.jwk.KeyUse;
 import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.jwk.ThumbprintUtils;
 import com.nimbusds.jose.util.Base64URL;
-import junit.framework.TestCase;
 
 
 public class RSAKeyGeneratorTest extends TestCase {
@@ -70,6 +73,27 @@ public class RSAKeyGeneratorTest extends TestCase {
 		assertNull(rsaJWK.getAlgorithm());
 		assertNull(rsaJWK.getKeyID());
 		assertNull(rsaJWK.getKeyStore());
+	}
+	
+	
+	public void testWithSecureRandom()
+		throws JOSEException {
+		
+		final AtomicInteger nextBytesCalls = new AtomicInteger();
+		
+		RSAKey rsaJWK = new RSAKeyGenerator(2048)
+			.secureRandom(new SecureRandom() {
+				@Override
+				public void nextBytes(byte[] bytes) {
+					assertEquals(128, bytes.length);
+					super.nextBytes(bytes);
+					nextBytesCalls.incrementAndGet();
+				}
+			})
+			.generate();
+		
+		assertEquals(2048, rsaJWK.size());
+		assertTrue(2048 / 128 < nextBytesCalls.get());
 	}
 	
 	

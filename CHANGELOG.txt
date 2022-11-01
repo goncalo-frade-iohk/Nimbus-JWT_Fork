@@ -1411,3 +1411,79 @@ version 9.17 (2022-01-30)
 version 9.18 (2022-01-30)
     * ThumbprintURI implements draft-ietf-oauth-jwk-thumbprint-uri-00.
 
+version 9.19 (2022-02-07)
+    * Updates KeyUse.from(X509Certificate) to return null when the certificate
+      public key use doesn't map to a single JWK use value (iss #461).
+
+version 9.20 (2022-02-21)
+    * Upgrades ThumbprintURI to draft-ietf-oauth-jwk-thumbprint-uri-01.
+
+version 9.21 (2022-03-07)
+    * Prevent construction and parsing of JWS and JWE headers with non-public
+      key in "jwk" parameter (iss #467).
+
+version 9.21.1 (2022-04-21)
+    * ECDSA.transcodeSignatureToDER must not throw unchecked exceptions (iss
+      #473).
+    * Adds line of defence against CVE-2022-21449 attacks on vulnerable JREs in
+      addition to the existing defence in ECDSA.transcodeSignatureToDER (iss
+      #474).
+    * Bumps JSON Smart to 2.4.8.
+
+version 9.22 (2022-04-22)
+    * Adds ECDSA R and S signature value checking to prevent exploitation of
+      Java runtimes and JCE providers vulnerable to CVE-2022-21449 (iss #472).
+    * Makes ECParameterTable public.
+    * Adds ByteUtils.isZeroFilled static method.
+
+version 9.23 (2022-05-28)
+    * Adds JWKMatcher support for matching JWKs with present "x5c".
+    * Updates JWKMatcher to match "x5t#S256" against a key's "x5t#S256"
+      parameter as well as the computed thumbprint of a "x5c" parameter.
+    * Simplifies JCASupport.isSupported(JWSAlgorithm,Provider)
+
+version 9.24 (2022-08-16)
+    * Replaces JSON Smart 2.4.8 (shaded) with GSon 2.9.1 (also shaded) (iss
+      #448, #483).
+
+version 9.24.1 (2022-08-16)
+    * Fixes GSon relocation pattern in maven-shade-plugin config (iss #484).
+
+version 9.24.2 (2022-08-19)
+    * Fixes GSon integer parsing in JSONObjectUtils (iss #485).
+
+version 9.24.3 (2022-08-26)
+    * Updates Google Tink to 1.7.0.
+
+version 9.24.4 (2022-09-09)
+    * Fixes GSon serialisation of HTML and XML control characters (iss #489).
+
+version 9.25 (2022-09-13)
+    * Adds support to use a SecureRandom in RSAKeyGenerator.generate() and
+      ECKeyGenerator.generate().
+
+version 9.25.1 (2022-09-20)
+    * Updates the DirectCryptoProvider (alg=dir) to support HSM-based SecretKey
+      instances with A128GCM, A192GCM and A256GCM (iss #490).
+
+version 9.25.2 (2022-09-22)
+    * KeyUtils.toAESKey must not recreate the SecretKey but wrap it, to avoid
+      calling its getEncoded method (iss #490).
+
+version 9.25.3 (2022-09-24)
+    * KeyUtils.toAESKey must return the input key unmodified if its algorithm
+      is AES (iss #490).
+
+version 9.25.4 (2022-09-27)
+    * JSONObjectUtils.parse must throw ParseException on empty string (iss
+      #492).
+    * JWSObject.parse with empty signature must throw ParseException instead of
+      postpone error condition to signature validation (iss #493).
+
+version 9.25.5 (2022-10-11)
+    * The module-info.class from the shaded com.google.gson package must not be
+      included in the JAR (iss #496).
+
+version 9.25.6 (2022-10-13)
+    * Addresses incomplete #496 fix to remove module-info.class for the shaded
+      com.google.gson package (iss #497).

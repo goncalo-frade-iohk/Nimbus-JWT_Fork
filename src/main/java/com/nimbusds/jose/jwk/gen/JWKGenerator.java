@@ -19,6 +19,7 @@ package com.nimbusds.jose.jwk.gen;
 
 
 import java.security.KeyStore;
+import java.security.SecureRandom;
 import java.util.Set;
 
 import com.nimbusds.jose.Algorithm;
@@ -33,7 +34,8 @@ import com.nimbusds.jose.jwk.KeyUse;
  * Abstract JWK generator.
  *
  * @author Vladimir Dzhuvinov
- * @version 2018-09-07
+ * @author Justin Cranford
+ * @version 2022-09-13
  */
 public abstract class JWKGenerator<T extends JWK> {
 	
@@ -73,8 +75,15 @@ public abstract class JWKGenerator<T extends JWK> {
 	 * Reference to the underlying key store, {@code null} if none.
 	 */
 	protected KeyStore keyStore;
-	
-	
+
+
+	/**
+	 * The secure random generator to use, {@code null} to use the default
+	 * one.
+	 */
+	protected SecureRandom secureRandom;
+
+
 	/**
 	 * Sets the use ({@code use}) of the JWK.
 	 *
@@ -181,4 +190,19 @@ public abstract class JWKGenerator<T extends JWK> {
 	 * @throws JOSEException If the key generation failed.
 	 */
 	public abstract T generate() throws JOSEException;
+
+
+	/**
+	 * Sets the secure random generator to use.
+	 *
+	 * @param secureRandom The secure random generator to use, {@code null}
+	 *                     to use the default one.
+	 *
+	 * @return This generator.
+	 */
+	public JWKGenerator<T> secureRandom(final SecureRandom secureRandom) {
+
+		this.secureRandom = secureRandom;
+		return this;
+	}
 }

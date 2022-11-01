@@ -18,17 +18,16 @@
 package com.nimbusds.jose.jwk.gen;
 
 
+import java.security.SecureRandom;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWEAlgorithm;
-import com.nimbusds.jose.jwk.KeyOperation;
-import com.nimbusds.jose.jwk.KeyUse;
-import com.nimbusds.jose.jwk.OctetSequenceKey;
-import com.nimbusds.jose.jwk.ThumbprintUtils;
+import com.nimbusds.jose.jwk.*;
 import com.nimbusds.jose.util.Base64URL;
 import junit.framework.TestCase;
 
@@ -76,6 +75,27 @@ public class OctetSequenceKeyGeneratorTest extends TestCase {
 		assertNull(octJWK.getAlgorithm());
 		assertNull(octJWK.getKeyID());
 		assertNull(octJWK.getKeyStore());
+	}
+	
+	
+	public void testWithSecureRandom()
+		throws JOSEException {
+		
+		final AtomicInteger nextBytesCalls = new AtomicInteger();
+		
+		OctetSequenceKey octJWK = new OctetSequenceKeyGenerator(256)
+			.secureRandom(new SecureRandom() {
+				@Override
+				public void nextBytes(byte[] bytes) {
+					assertEquals(256 / 8, bytes.length);
+					super.nextBytes(bytes);
+					nextBytesCalls.incrementAndGet();
+				}
+			})
+			.generate();
+		
+		assertEquals(256, octJWK.size());
+		assertEquals(1, nextBytesCalls.get());
 	}
 	
 	

@@ -592,6 +592,7 @@ public class ECKeyTest extends TestCase {
 				.keyUse(use)
 				.keyOperations(ops)
 				.build();
+			fail();
 		} catch (IllegalStateException e) {
 			assertEquals("The key use \"use\" and key options \"key_ops\" parameters are not consistent, see RFC 7517, section 4.3", e.getMessage());
 		}
@@ -872,7 +873,7 @@ public class ECKeyTest extends TestCase {
 		
 		assertEquals(KeyType.EC, ecKey.getKeyType());
 		assertEquals(Curve.P_256, ecKey.getCurve());
-		assertEquals(KeyUse.ENCRYPTION, ecKey.getKeyUse());
+		assertNull(ecKey.getKeyUse());
 		assertEquals(cert.getSerialNumber().toString(10), ecKey.getKeyID());
 		assertEquals(1, ecKey.getX509CertChain().size());
 		assertNull(ecKey.getX509CertThumbprint());
@@ -975,7 +976,7 @@ public class ECKeyTest extends TestCase {
 		ECKey ecKey = ECKey.load(keyStore, "1", null);
 		assertNotNull(ecKey);
 		assertEquals(Curve.P_256, ecKey.getCurve());
-		assertEquals(KeyUse.ENCRYPTION, ecKey.getKeyUse());
+		assertNull(ecKey.getKeyUse());
 		assertEquals("1", ecKey.getKeyID());
 		assertEquals(1, ecKey.getX509CertChain().size());
 		assertNull(ecKey.getX509CertThumbprint());

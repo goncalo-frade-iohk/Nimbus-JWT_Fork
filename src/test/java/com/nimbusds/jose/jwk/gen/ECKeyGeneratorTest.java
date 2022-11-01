@@ -18,9 +18,11 @@
 package com.nimbusds.jose.jwk.gen;
 
 
+import java.security.SecureRandom;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
@@ -45,6 +47,27 @@ public class ECKeyGeneratorTest extends TestCase {
 		assertNull(ecJWK.getAlgorithm());
 		assertNull(ecJWK.getKeyID());
 		assertNull(ecJWK.getKeyStore());
+	}
+	
+	
+	public void testWithSecureRandom()
+		throws JOSEException {
+		
+		final AtomicInteger nextBytesCalls = new AtomicInteger();
+		
+		ECKey ecJWK = new ECKeyGenerator(Curve.P_256)
+			.secureRandom(new SecureRandom() {
+				@Override
+				public void nextBytes(byte[] bytes) {
+					assertEquals(40, bytes.length);
+					super.nextBytes(bytes);
+					nextBytesCalls.incrementAndGet();
+				}
+			})
+			.generate();
+		
+		assertEquals(256, ecJWK.size());
+		assertEquals(1, nextBytesCalls.get());
 	}
 
 

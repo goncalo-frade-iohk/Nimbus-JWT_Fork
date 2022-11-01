@@ -99,6 +99,8 @@ public class OctetKeyPairGenerator extends JWKGenerator<OctetKeyPair> {
 			final byte[] publicKeyBytes;
 
 			try {
+				// TODO Use super.secureRandom if it is set
+
 				privateKeyBytes = X25519.generatePrivateKey();
 				publicKeyBytes = X25519.publicFromPrivate(privateKeyBytes);
 
@@ -115,6 +117,8 @@ public class OctetKeyPairGenerator extends JWKGenerator<OctetKeyPair> {
 			final Ed25519Sign.KeyPair tinkKeyPair;
 
 			try {
+				// TODO Use super.secureRandom if it is set
+
 				tinkKeyPair = Ed25519Sign.KeyPair.newKeyPair();
 
 			} catch (GeneralSecurityException e) {

@@ -33,7 +33,7 @@ import com.nimbusds.jose.util.Base64URL;
  * Tests JWS object methods.
  *
  * @author Vladimir Dzhuvinov
- * @version 2022-01-24
+ * @version 2022-09-27
  */
 public class JWSObjectTest extends TestCase {
 
@@ -165,8 +165,9 @@ public class JWSObjectTest extends TestCase {
 	}
 	
 	
+	// Originally a JSON Smart test, doesn't apply to GSon
 	public void testParseWithExcessiveMixedNestingInHeader() {
-	
+		
 		StringBuilder sb = new StringBuilder("{\"a\":");
 		for (int i = 0; i < 6000; i++) {
 			sb.append("[");
@@ -178,7 +179,7 @@ public class JWSObjectTest extends TestCase {
 			JWSObject.parse(jws);
 			fail();
 		} catch (ParseException e) {
-			assertEquals("Invalid JWS header: Excessive JSON object and / or array nesting", e.getMessage());
+			assertTrue(e.getMessage().startsWith("Invalid JWS header: Invalid JSON: "));
 		}
 	}
 	
@@ -197,5 +198,45 @@ public class JWSObjectTest extends TestCase {
 		Payload payload = jwsObject.getPayload();
 		assertNotNull(payload.toString());
 		assertNull(payload.toJSONObject());
+	}
+	
+	
+	public void testParseEmptyParts() {
+		
+		try {
+			JWSObject.parse("..");
+			fail();
+		} catch (ParseException e) {
+			assertEquals("Invalid JWS header: Invalid JSON object", e.getMessage());
+		}
+	}
+	
+	
+	public void testParseEmptyHeader() {
+		
+		try {
+			JWSObject.parse(".bbb.ccc");
+			fail();
+		} catch (ParseException e) {
+			assertEquals("Invalid JWS header: Invalid JSON object", e.getMessage());
+		}
+	}
+	
+	
+	public void testParseEmptyPayload() throws ParseException {
+		
+		JWSObject jwsObject = JWSObject.parse(new JWSHeader(JWSAlgorithm.RS256).toBase64URL() + "..ccc");
+		assertTrue(jwsObject.getPayload().toString().isEmpty());
+	}
+	
+	
+	public void testParseEmptySignature() {
+		
+		try {
+			JWSObject.parse(new JWSHeader(JWSAlgorithm.RS256).toBase64URL() + "..");
+			fail();
+		} catch (ParseException e) {
+			assertEquals("The signature must not be empty", e.getMessage());
+		}
 	}
 }

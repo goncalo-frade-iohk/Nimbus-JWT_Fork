@@ -19,21 +19,21 @@ package com.nimbusds.jose.util;
 
 
 import javax.crypto.SecretKey;
-import javax.crypto.spec.SecretKeySpec;
 
 
 /**
  * JCA key utilities.
  *
  * @author Vladimir Dzhuvinov
- * @version 2018-02-11
+ * @version 2022-09-24
  */
 public class KeyUtils {
 	
 	
 	/**
-	 * Returns the specified secret key as a secret key with its algorithm
-	 * set to "AES".
+	 * Returns the specified secret key as a wrapped secret key with its
+	 * algorithm set to "AES". If the input key algorithm is "AES" it is
+	 * returned unmodified.
 	 *
 	 * @param secretKey The secret key, {@code null} if not specified.
 	 *
@@ -41,11 +41,28 @@ public class KeyUtils {
 	 */
 	public static SecretKey toAESKey(final SecretKey secretKey) {
 		
-		if (secretKey == null) {
-			return null;
+		if (secretKey == null || secretKey.getAlgorithm().equals("AES")) {
+			return secretKey;
 		}
 		
-		return new SecretKeySpec(secretKey.getEncoded(), "AES");
+		return new SecretKey() {
+			@Override
+			public String getAlgorithm() {
+				return "AES";
+			}
+			
+			
+			@Override
+			public String getFormat() {
+				return secretKey.getFormat();
+			}
+			
+			
+			@Override
+			public byte[] getEncoded() {
+				return secretKey.getEncoded();
+			}
+		};
 	}
 	
 	

@@ -18,14 +18,14 @@
 package com.nimbusds.jose.util;
 
 
-import net.minidev.json.JSONObject;
+import com.google.gson.Gson;
 
 
 /**
  * JSON string helper methods.
  *
  * @author Vladimir Dzhuvinov
- * @version 2020-06-27
+ * @version 2022-08-16
  */
 public class JSONStringUtils {
 	
@@ -38,8 +38,7 @@ public class JSONStringUtils {
 	 * @return The string as JSON string.
 	 */
 	public static String toJSONString(final String string) {
-		
-		return "\"" + JSONObject.escape(string) + "\"";
+		return new Gson().toJson(string);
 	}
 	
 	

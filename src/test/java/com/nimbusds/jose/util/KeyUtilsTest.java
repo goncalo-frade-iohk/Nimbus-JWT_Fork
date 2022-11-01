@@ -23,6 +23,7 @@ import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 
 import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertNotEquals;
 
 import junit.framework.TestCase;
 
@@ -30,7 +31,7 @@ import junit.framework.TestCase;
 public class KeyUtilsTest extends TestCase {
 	
 	
-	public void testToAESSecretKey()
+	public void testToAESSecretKey_wrap()
 		throws Exception {
 		
 		KeyGenerator gen = KeyGenerator.getInstance("AES");
@@ -48,11 +49,61 @@ public class KeyUtilsTest extends TestCase {
 		assertEquals(128, ByteUtils.bitLength(key.getEncoded()));
 		assertArrayEquals(key.getEncoded(), aesKey.getEncoded());
 		assertEquals("AES", aesKey.getAlgorithm());
+		
+		assertNotEquals(aesKey, key);
+	}
+	
+	
+	public void testToAESSecretKey_returnUnmodified()
+		throws Exception {
+		
+		KeyGenerator gen = KeyGenerator.getInstance("AES");
+		gen.init(128);
+		SecretKey key = gen.generateKey();
+		
+		assertEquals(key, KeyUtils.toAESKey(key));
 	}
 	
 	
 	public void testToAESSecretKey_null() {
 		
 		assertNull(KeyUtils.toAESKey(null));
+	}
+	
+	
+	public void testToAESSecretKey_mustNotCallUnderlyingGetEncoded() {
+		
+		SecretKey originalKey = new SecretKey() {
+			@Override
+			public String getAlgorithm() {
+				return "SOME";
+			}
+			
+			
+			@Override
+			public String getFormat() {
+				return "format";
+			}
+			
+			
+			@Override
+			public byte[] getEncoded() {
+				throw new RuntimeException();
+			}
+		};
+		
+		SecretKey out = KeyUtils.toAESKey(originalKey);
+		
+		assertEquals("AES", out.getAlgorithm());
+		assertEquals("format", out.getFormat());
+		
+		try {
+			out.getEncoded();
+			fail();
+		} catch (RuntimeException e) {
+			// ok
+		}
+		
+		assertNotSame(originalKey, out);
 	}
 }

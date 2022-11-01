@@ -43,7 +43,8 @@ import com.nimbusds.jose.jwk.ECKey;
  * </ul>
  *
  * @author Vladimir Dzhuvinov
- * @version 2019-04-17
+ * @author Justin Cranford
+ * @version 2022-09-13
  */
 public class ECKeyGenerator extends JWKGenerator<ECKey> {
 	
@@ -82,7 +83,12 @@ public class ECKeyGenerator extends JWKGenerator<ECKey> {
 			} else {
 				generator = KeyPairGenerator.getInstance("EC");
 			}
-			generator.initialize(ecSpec);
+			if (secureRandom != null) {
+				generator.initialize(ecSpec, secureRandom);
+			} else {
+				// The default random gen
+				generator.initialize(ecSpec);
+			}
 		} catch (NoSuchAlgorithmException | InvalidAlgorithmParameterException e) {
 			throw new JOSEException(e.getMessage(), e);
 		}

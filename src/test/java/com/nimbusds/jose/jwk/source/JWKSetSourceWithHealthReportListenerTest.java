@@ -65,7 +65,7 @@ public class JWKSetSourceWithHealthReportListenerTest extends AbstractWrappedJWK
 	@Test
 	public void nullReportPriorToInvocation() throws Exception {
 		
-		Mockito.verify(wrappedJWKSetSource, times(0)).getJWKSet(eq(false), anyLong(), anySecurityContext());
+		Mockito.verify(wrappedJWKSetSource, times(0)).getJWKSet(eq(JWKSetCacheEvaluator.never()), anyLong(), anySecurityContext());
 		
 		assertNull(listener.getLastReport());
 	}
@@ -73,16 +73,16 @@ public class JWKSetSourceWithHealthReportListenerTest extends AbstractWrappedJWK
 	@Test
 	public void reportHealthyStatus() throws Exception {
 		
-		when(wrappedJWKSetSource.getJWKSet(eq(false), anyLong(), anySecurityContext())).thenReturn(jwkSet);
+		when(wrappedJWKSetSource.getJWKSet(eq(JWKSetCacheEvaluator.never()), anyLong(), anySecurityContext())).thenReturn(jwkSet);
 
 		// attempt to get JWK set
-		source.getJWKSet(false, System.currentTimeMillis(), context);
+		source.getJWKSet(JWKSetCacheEvaluator.never(), System.currentTimeMillis(), context);
 		
 		assertEquals(HealthStatus.HEALTHY, listener.getLastReport().getHealthStatus());
 
 		// expected behavior: the health provider did not attempt to refresh
 		// a good health status.
-		Mockito.verify(wrappedJWKSetSource, times(1)).getJWKSet(eq(false), anyLong(), anySecurityContext());
+		Mockito.verify(wrappedJWKSetSource, times(1)).getJWKSet(eq(JWKSetCacheEvaluator.never()), anyLong(), anySecurityContext());
 		
 		assertEquals(HealthStatus.HEALTHY, listener.getLastReport().getHealthStatus());
 	}
@@ -92,10 +92,10 @@ public class JWKSetSourceWithHealthReportListenerTest extends AbstractWrappedJWK
 		
 		Exception exception = new KeySourceException("test");
 		
-		when(wrappedJWKSetSource.getJWKSet(eq(false), anyLong(), anySecurityContext())).thenThrow(exception);
+		when(wrappedJWKSetSource.getJWKSet(eq(JWKSetCacheEvaluator.never()), anyLong(), anySecurityContext())).thenThrow(exception);
 
 		try {
-			source.getJWKSet(false, System.currentTimeMillis(), context);
+			source.getJWKSet(JWKSetCacheEvaluator.never(), System.currentTimeMillis(), context);
 			fail();
 		} catch (KeySourceException e) {
 			assertEquals("test", e.getMessage());
@@ -104,6 +104,6 @@ public class JWKSetSourceWithHealthReportListenerTest extends AbstractWrappedJWK
 		assertEquals(HealthStatus.NOT_HEALTHY, listener.getLastReport().getHealthStatus());
 		assertEquals(exception, listener.getLastReport().getException());
 		
-		Mockito.verify(wrappedJWKSetSource, times(1)).getJWKSet(eq(false), anyLong(), anySecurityContext());
+		Mockito.verify(wrappedJWKSetSource, times(1)).getJWKSet(eq(JWKSetCacheEvaluator.never()), anyLong(), anySecurityContext());
 	}
 }

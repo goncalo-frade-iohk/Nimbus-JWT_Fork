@@ -28,6 +28,7 @@ import com.nimbusds.jose.jwk.JWK;
 import com.nimbusds.jose.jwk.JWKMatcher;
 import com.nimbusds.jose.jwk.JWKSelector;
 import com.nimbusds.jose.jwk.JWKSet;
+import com.nimbusds.jose.jwk.source.JWKSetCacheEvaluator.NeverRefresh;
 import com.nimbusds.jose.proc.SecurityContext;
 import com.nimbusds.jose.proc.SimpleSecurityContext;
 
@@ -56,7 +57,7 @@ public abstract class AbstractWrappedJWKSetSourceTest {
 		when(jwk.getKeyID()).thenReturn(KID);
 		jwkSet = new JWKSet(jwk);
 
-		when(wrappedJWKSetSource.getJWKSet(eq(false), anyLong(), any(SecurityContext.class))).thenReturn(jwkSet);
+		when(wrappedJWKSetSource.getJWKSet(eq(JWKSetCacheEvaluator.never()), anyLong(), any(SecurityContext.class))).thenReturn(jwkSet);
 	}
 	
 	protected JWKSourceBuilder<SecurityContext> builder() {
@@ -66,4 +67,14 @@ public abstract class AbstractWrappedJWKSetSourceTest {
 	protected static SecurityContext anySecurityContext() {
 		return any(SecurityContext.class);
 	}
+
+	protected static JWKSetCacheEvaluator anyJWKSetCacheEvaluator() {
+		return any(JWKSetCacheEvaluator.class);
+	}
+	
+
+	protected static NeverRefresh anyNeverJWKSetCacheEvaluator() {
+		return any(NeverRefresh.class);
+	}
+
 }

@@ -79,7 +79,7 @@ public class RateLimitedJWKSetSource<C extends SecurityContext> extends JWKSetSo
 	
 	
 	@Override
-	public JWKSet getJWKSet(final boolean forceReload, final long currentTime, final C context)
+	public JWKSet getJWKSet(final JWKSetCacheEvaluator cacheEvaluator, final long currentTime, final C context)
 		throws KeySourceException {
 		
 		// implementation note: this code is not intended to run many parallel threads
@@ -104,7 +104,7 @@ public class RateLimitedJWKSetSource<C extends SecurityContext> extends JWKSetSo
 			}
 			throw new RateLimitReachedException();
 		}
-		return getSource().getJWKSet(forceReload, currentTime, context);
+		return getSource().getJWKSet(cacheEvaluator, currentTime, context);
 	}
 	
 	

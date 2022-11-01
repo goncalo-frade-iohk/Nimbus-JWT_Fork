@@ -19,7 +19,7 @@ public class MutableJWKSetSource<C extends SecurityContext> implements JWKSetSou
 	}
 
 	@Override
-	public JWKSet getJWKSet(final boolean forceReload, final long currentTime, final C context) throws KeySourceException {
+	public JWKSet getJWKSet(final JWKSetCacheEvaluator cacheEvaluator, final long currentTime, final C context) throws KeySourceException {
 		return jwkSet;
 	}
 

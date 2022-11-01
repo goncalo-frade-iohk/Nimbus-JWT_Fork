@@ -107,24 +107,23 @@ public class OutageTolerantJWKSetSource<C extends SecurityContext> extends Abstr
 
 	
 	@Override
-	public JWKSet getJWKSet(final boolean forceReload, final long currentTime, final C context) throws KeySourceException {
+	public JWKSet getJWKSet(final JWKSetCacheEvaluator cacheEvaluator, final long currentTime, final C context) throws KeySourceException {
 		try {
 			// cache if successfully refreshed by the underlying source
-			JWKSet jwkSet = getSource().getJWKSet(forceReload, currentTime, context);
+			JWKSet jwkSet = getSource().getJWKSet(cacheEvaluator, currentTime, context);
 			cacheJWKSet(jwkSet, currentTime);
 			return jwkSet;
 			
 		} catch (JWKSetUnavailableException e) {
-			if (! forceReload) {
-				// return the previously cached JWT set
-				CachedObject<JWKSet> cache = getCachedJWKSet();
-				if (cache != null && cache.isValid(currentTime)) {
-					long remainingTime = cache.getExpirationTime() - currentTime; // in millis
-					if (eventListener != null) {
-						eventListener.notify(new OutageEvent<>(this, e, remainingTime, context));
-					}
-					return cache.get();
+			// return the previously cached JWT set
+			// TODO do we want to use the cacheEvaluator here somehow?
+			CachedObject<JWKSet> cache = getCachedJWKSet();
+			if (cache != null && cache.isValid(currentTime)) {
+				long remainingTime = cache.getExpirationTime() - currentTime; // in millis
+				if (eventListener != null) {
+					eventListener.notify(new OutageEvent<>(this, e, remainingTime, context));
 				}
+				return cache.get();
 			}
 
 			throw e;

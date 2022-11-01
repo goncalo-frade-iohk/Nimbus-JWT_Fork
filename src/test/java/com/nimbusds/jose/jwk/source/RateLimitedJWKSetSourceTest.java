@@ -53,11 +53,11 @@ public class RateLimitedJWKSetSourceTest extends AbstractWrappedJWKSetSourceTest
 	@Test
 	public void rateLimitedWhenEmptyBucket() throws Exception {
 		source = new RateLimitedJWKSetSource<>(wrappedJWKSetSource, MIN_TIME_INTERVAL, null);
-		when(wrappedJWKSetSource.getJWKSet(eq(false), anyLong(), anySecurityContext())).thenReturn(jwkSet);
-		assertEquals(jwkSet, source.getJWKSet(false, System.currentTimeMillis(), context));
-		assertEquals(jwkSet, source.getJWKSet(false, System.currentTimeMillis() + 1, context));
+		when(wrappedJWKSetSource.getJWKSet(eq(JWKSetCacheEvaluator.never()), anyLong(), anySecurityContext())).thenReturn(jwkSet);
+		assertEquals(jwkSet, source.getJWKSet(JWKSetCacheEvaluator.never(), System.currentTimeMillis(), context));
+		assertEquals(jwkSet, source.getJWKSet(JWKSetCacheEvaluator.never(), System.currentTimeMillis() + 1, context));
 		try {
-			source.getJWKSet(false, System.currentTimeMillis(), context);
+			source.getJWKSet(JWKSetCacheEvaluator.never(), System.currentTimeMillis(), context);
 			fail();
 		} catch(RateLimitReachedException e) {
 			// pass
@@ -68,13 +68,13 @@ public class RateLimitedJWKSetSourceTest extends AbstractWrappedJWKSetSourceTest
 	@Test
 	public void rateLimitedWhenEmptyBucket_withListener() throws Exception {
 		source = new RateLimitedJWKSetSource<>(wrappedJWKSetSource, MIN_TIME_INTERVAL, eventListener);
-		when(wrappedJWKSetSource.getJWKSet(eq(false), anyLong(), anySecurityContext())).thenReturn(jwkSet);
-		assertEquals(jwkSet, source.getJWKSet(false, System.currentTimeMillis(), context));
+		when(wrappedJWKSetSource.getJWKSet(eq(JWKSetCacheEvaluator.never()), anyLong(), anySecurityContext())).thenReturn(jwkSet);
+		assertEquals(jwkSet, source.getJWKSet(JWKSetCacheEvaluator.never(), System.currentTimeMillis(), context));
 		assertTrue(events.isEmpty());
-		assertEquals(jwkSet, source.getJWKSet(false, System.currentTimeMillis() + 1, context));
+		assertEquals(jwkSet, source.getJWKSet(JWKSetCacheEvaluator.never(), System.currentTimeMillis() + 1, context));
 		assertTrue(events.isEmpty());
 		try {
-			source.getJWKSet(false, System.currentTimeMillis(), context);
+			source.getJWKSet(JWKSetCacheEvaluator.never(), System.currentTimeMillis(), context);
 			fail();
 		} catch(RateLimitReachedException e) {
 			// pass
@@ -86,11 +86,11 @@ public class RateLimitedJWKSetSourceTest extends AbstractWrappedJWKSetSourceTest
 	@Test
 	public void rateLimitedWhenEmptyBucket_forceUpdate() throws Exception {
 		source = new RateLimitedJWKSetSource<>(wrappedJWKSetSource, MIN_TIME_INTERVAL, eventListener);
-		when(wrappedJWKSetSource.getJWKSet(eq(true), anyLong(), anySecurityContext())).thenReturn(jwkSet);
-		assertEquals(jwkSet, source.getJWKSet(true, System.currentTimeMillis(), context));
-		assertEquals(jwkSet, source.getJWKSet(true, System.currentTimeMillis() + 1, context));
+		when(wrappedJWKSetSource.getJWKSet(eq(JWKSetCacheEvaluator.always()), anyLong(), anySecurityContext())).thenReturn(jwkSet);
+		assertEquals(jwkSet, source.getJWKSet(JWKSetCacheEvaluator.always(), System.currentTimeMillis(), context));
+		assertEquals(jwkSet, source.getJWKSet(JWKSetCacheEvaluator.always(), System.currentTimeMillis() + 1, context));
 		try {
-			source.getJWKSet(true, System.currentTimeMillis(), context);
+			source.getJWKSet(JWKSetCacheEvaluator.always(), System.currentTimeMillis(), context);
 			fail();
 		} catch(RateLimitReachedException e) {
 			// pass
@@ -106,18 +106,18 @@ public class RateLimitedJWKSetSourceTest extends AbstractWrappedJWKSetSourceTest
 		
 		long time = System.currentTimeMillis();
 		
-		when(wrappedJWKSetSource.getJWKSet(eq(false), anyLong(), anySecurityContext())).thenReturn(jwkSet);
-		assertEquals(jwkSet, source.getJWKSet(false, time, context));
-		assertEquals(jwkSet, source.getJWKSet(false, time + 1, context));
+		when(wrappedJWKSetSource.getJWKSet(eq(JWKSetCacheEvaluator.never()), anyLong(), anySecurityContext())).thenReturn(jwkSet);
+		assertEquals(jwkSet, source.getJWKSet(JWKSetCacheEvaluator.never(), time, context));
+		assertEquals(jwkSet, source.getJWKSet(JWKSetCacheEvaluator.never(), time + 1, context));
 		try {
-			source.getJWKSet(false, time + 2, context);
+			source.getJWKSet(JWKSetCacheEvaluator.never(), time + 2, context);
 			fail();
 		} catch(RateLimitReachedException e) {
 			// pass
 			assertNull(e.getMessage());
 		}
 		
-		assertEquals(source.getJWKSet(false, time + MIN_TIME_INTERVAL, context), jwkSet);
+		assertEquals(source.getJWKSet(JWKSetCacheEvaluator.never(), time + MIN_TIME_INTERVAL, context), jwkSet);
 	}
 	
 	@Test
@@ -127,13 +127,13 @@ public class RateLimitedJWKSetSourceTest extends AbstractWrappedJWKSetSourceTest
 		
 		long time = System.currentTimeMillis();
 		
-		when(wrappedJWKSetSource.getJWKSet(eq(false), anyLong(), anySecurityContext())).thenReturn(jwkSet);
-		assertEquals(jwkSet, source.getJWKSet(false, time, context));
+		when(wrappedJWKSetSource.getJWKSet(eq(JWKSetCacheEvaluator.never()), anyLong(), anySecurityContext())).thenReturn(jwkSet);
+		assertEquals(jwkSet, source.getJWKSet(JWKSetCacheEvaluator.never(), time, context));
 		assertTrue(events.isEmpty());
-		assertEquals(jwkSet, source.getJWKSet(false, time + 1, context));
+		assertEquals(jwkSet, source.getJWKSet(JWKSetCacheEvaluator.never(), time + 1, context));
 		assertTrue(events.isEmpty());
 		try {
-			source.getJWKSet(false, time + 2, context);
+			source.getJWKSet(JWKSetCacheEvaluator.never(), time + 2, context);
 			fail();
 		} catch(RateLimitReachedException e) {
 			// pass
@@ -141,7 +141,7 @@ public class RateLimitedJWKSetSourceTest extends AbstractWrappedJWKSetSourceTest
 		}
 		assertEquals(1, events.size());
 		
-		assertEquals(source.getJWKSet(false, time + MIN_TIME_INTERVAL, context), jwkSet);
+		assertEquals(source.getJWKSet(JWKSetCacheEvaluator.never(), time + MIN_TIME_INTERVAL, context), jwkSet);
 		assertEquals(1, events.size());
 	}
 
@@ -150,10 +150,10 @@ public class RateLimitedJWKSetSourceTest extends AbstractWrappedJWKSetSourceTest
 		
 		source = new RateLimitedJWKSetSource<>(wrappedJWKSetSource, MIN_TIME_INTERVAL, eventListener);
 		
-		when(wrappedJWKSetSource.getJWKSet(eq(false), anyLong(), anySecurityContext())).thenReturn(jwkSet);
+		when(wrappedJWKSetSource.getJWKSet(eq(JWKSetCacheEvaluator.never()), anyLong(), anySecurityContext())).thenReturn(jwkSet);
 		
-		assertEquals(jwkSet, source.getJWKSet(false, System.currentTimeMillis(), context));
-		verify(wrappedJWKSetSource).getJWKSet(eq(false), anyLong(), anySecurityContext());
+		assertEquals(jwkSet, source.getJWKSet(JWKSetCacheEvaluator.never(), System.currentTimeMillis(), context));
+		verify(wrappedJWKSetSource).getJWKSet(eq(JWKSetCacheEvaluator.never()), anyLong(), anySecurityContext());
 		
 		assertTrue(events.isEmpty());
 	}

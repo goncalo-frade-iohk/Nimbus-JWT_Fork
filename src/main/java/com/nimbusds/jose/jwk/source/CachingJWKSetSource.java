@@ -168,11 +168,21 @@ public class CachingJWKSetSource<C extends SecurityContext> extends AbstractCach
 
 	
 	@Override
-	public JWKSet getJWKSet(final boolean forceReload, final long currentTime, final C context) throws KeySourceException {
+	public JWKSet getJWKSet(final JWKSetCacheEvaluator cacheEvaluator, final long currentTime, final C context) throws KeySourceException {
 		CachedObject<JWKSet> cache = getCachedJWKSet();
-		if (cache == null || (forceReload && cache.getTimestamp() < currentTime) || cache.isExpired(currentTime)) {
-			return loadJWKSetBlocking(currentTime, context);
+		if (cache == null) {
+			return loadJWKSetBlocking(JWKSetCacheEvaluator.never(), currentTime, context);
 		}
+
+		JWKSet jwkSet = cache.get();
+		if (cacheEvaluator.performRefresh(jwkSet)) {
+			return loadJWKSetBlocking(cacheEvaluator, currentTime, context);
+		}		
+		
+		if (cache.isExpired(currentTime)) {
+			return loadJWKSetBlocking(JWKSetCacheEvaluator.optional(jwkSet), currentTime, context);
+		}		
+
 		return cache.get();
 	}
 	
@@ -198,7 +208,7 @@ public class CachingJWKSetSource<C extends SecurityContext> extends AbstractCach
 	 *
 	 * @throws KeySourceException If retrieval failed.
 	 */
-	JWKSet loadJWKSetBlocking(final long currentTime, final C context)
+	JWKSet loadJWKSetBlocking(final JWKSetCacheEvaluator evaluator, final long currentTime, final C context)
 		throws KeySourceException {
 		
 		// Synchronize so that the first thread to acquire the lock
@@ -216,16 +226,16 @@ public class CachingJWKSetSource<C extends SecurityContext> extends AbstractCach
 		try {
 			if (lock.tryLock()) {
 				try {
-					// see if anyone already refreshed the cache while we were
-					// getting the lock
-					if (cacheNotUpdatedSince(currentTime)) {
-						// Seems cache was not updated.
-						// We hold the lock, so safe to update it now
+					// We hold the lock, so safe to update it now, 
+					// Check evaluator, another thread might have already updated the JWKs
+					CachedObject<JWKSet> cachedJWKSet = getCachedJWKSet();
+					if (cachedJWKSet == null || evaluator.performRefresh(cachedJWKSet.get())) {
+	
 						if (eventListener != null) {
 							eventListener.notify(new RefreshInitiatedEvent<>(this, lock.getQueueLength(), context));
 						}
 						
-						CachedObject<JWKSet> result = loadJWKSetNotThreadSafe(currentTime, context);
+						CachedObject<JWKSet> result = loadJWKSetNotThreadSafe(evaluator, currentTime, context);
 						
 						if (eventListener != null) {
 							eventListener.notify(new RefreshCompletedEvent<>(this, result.get(), lock.getQueueLength(), context));
@@ -233,9 +243,9 @@ public class CachingJWKSetSource<C extends SecurityContext> extends AbstractCach
 						
 						cache = result;
 					} else {
-						// load updated value
-						cache = getCachedJWKSet();
+						cache = cachedJWKSet;
 					}
+					
 				} finally {
 					lock.unlock();
 				}
@@ -247,23 +257,23 @@ public class CachingJWKSetSource<C extends SecurityContext> extends AbstractCach
 
 				if (lock.tryLock(getCacheRefreshTimeout(), TimeUnit.MILLISECONDS)) {
 					try {
-						// see if anyone already refreshed the cache while we were
-						// waiting to get hold of the lock
-						if (cacheNotUpdatedSince(currentTime)) {
+						// Check evaluator, another thread have most likely already updated the JWKs
+						CachedObject<JWKSet> cachedJWKSet = getCachedJWKSet();
+						if (cachedJWKSet == null || evaluator.performRefresh(cachedJWKSet.get())) {
 							// Seems cache was not updated.
 							// We hold the lock, so safe to update it now
 							if (eventListener != null) {
 								eventListener.notify(new RefreshInitiatedEvent<>(this, lock.getQueueLength(), context));
 							}
 							
-							cache = loadJWKSetNotThreadSafe(currentTime, context);
+							cache = loadJWKSetNotThreadSafe(evaluator, currentTime, context);
 							
 							if (eventListener != null) {
 								eventListener.notify(new RefreshCompletedEvent<>(this, cache.get(), lock.getQueueLength(), context));
 							}
 						} else {
 							// load updated value
-							cache = getCachedJWKSet();
+							cache = cachedJWKSet;
 						}
 					} finally {
 						lock.unlock();
@@ -296,16 +306,6 @@ public class CachingJWKSetSource<C extends SecurityContext> extends AbstractCach
 		}
 	}
 	
-	
-	private boolean cacheNotUpdatedSince(final long time) {
-		CachedObject<JWKSet> latest = getCachedJWKSet();
-		if (latest == null) {
-			return true;
-		}
-		return time > latest.getTimestamp();
-	}
-	
-	
 	/**
 	 * Loads the JWK set from the wrapped source and caches it. Should not
 	 * be run by more than one thread at a time.
@@ -317,10 +317,10 @@ public class CachingJWKSetSource<C extends SecurityContext> extends AbstractCach
 	 *
 	 * @throws KeySourceException If loading failed.
 	 */
-	CachedObject<JWKSet> loadJWKSetNotThreadSafe(final long currentTime, final C context)
+	CachedObject<JWKSet> loadJWKSetNotThreadSafe(final JWKSetCacheEvaluator evaluator, final long currentTime, final C context)
 		throws KeySourceException {
 		
-		JWKSet jwkSet = getSource().getJWKSet(false, currentTime, context);
+		JWKSet jwkSet = getSource().getJWKSet(evaluator, currentTime, context);
 
 		return cacheJWKSet(jwkSet, currentTime);
 	}

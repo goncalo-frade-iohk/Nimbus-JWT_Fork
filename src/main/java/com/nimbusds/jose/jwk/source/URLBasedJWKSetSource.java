@@ -62,7 +62,7 @@ public class URLBasedJWKSetSource<C extends SecurityContext> implements JWKSetSo
 	
 	
 	@Override
-	public JWKSet getJWKSet(final boolean forceReload, final long currentTime, final C context) throws KeySourceException {
+	public JWKSet getJWKSet(final JWKSetCacheEvaluator cacheEvaluator, final long currentTime, final C context) throws KeySourceException {
 		
 		Resource resource;
 		try {

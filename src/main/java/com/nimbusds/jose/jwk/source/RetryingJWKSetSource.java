@@ -85,18 +85,18 @@ public class RetryingJWKSetSource<C extends SecurityContext> extends JWKSetSourc
 
 	
 	@Override
-	public JWKSet getJWKSet(final boolean forceReload, final long currentTime, final C context)
+	public JWKSet getJWKSet(final JWKSetCacheEvaluator cacheEvaluator, final long currentTime, final C context)
 		throws KeySourceException {
 		
 		try {
-			return getSource().getJWKSet(forceReload, currentTime, context);
+			return getSource().getJWKSet(cacheEvaluator, currentTime, context);
 			
 		} catch (JWKSetUnavailableException e) {
 			// assume transient network issue, retry once
 			if (eventListener != null) {
 				eventListener.notify(new RetrialEvent<C>(this, e, context));
 			}
-			return getSource().getJWKSet(forceReload, currentTime, context);
+			return getSource().getJWKSet(cacheEvaluator, currentTime, context);
 		}
 	}
 }

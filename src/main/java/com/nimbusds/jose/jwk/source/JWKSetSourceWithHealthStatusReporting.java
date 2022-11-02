@@ -62,12 +62,12 @@ public class JWKSetSourceWithHealthStatusReporting<C extends SecurityContext> ex
 	
 	
 	@Override
-	public JWKSet getJWKSet(final boolean forceReload, final long currentTime, final C context)
+	public JWKSet getJWKSet(final JWKSetCacheEvaluator cacheEvaluator, final long currentTime, final C context)
 		throws KeySourceException {
 		
 		JWKSet jwkSet;
 		try {
-			jwkSet = getSource().getJWKSet(forceReload, currentTime, context);
+			jwkSet = getSource().getJWKSet(cacheEvaluator, currentTime, context);
 			healthReportListener.notify(new HealthReport<>(this, HealthStatus.HEALTHY, currentTime, context));
 		} catch (Exception e) {
 			healthReportListener.notify(new HealthReport<>(this, HealthStatus.NOT_HEALTHY, e, currentTime, context));

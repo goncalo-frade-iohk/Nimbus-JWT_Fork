@@ -34,21 +34,19 @@ import com.nimbusds.jose.proc.SecurityContext;
  */
 public interface JWKSetSource<C extends SecurityContext> extends Closeable {
 
-	
 	/**
 	 * Gets the JWK set.
 	 *
-	 * @param forceReload If {@code true} and caching is present forces a
-	 *                    reloading of the JWK set when older than the
-	 *                    current time argument.
-	 * @param currentTime The current time, in milliseconds since the Unix
-	 *                    epoch.
-	 * @param context     Optional context, {@code null} if not required.
+	 * @param cacheEvaluator 	Cache evaluator. Lets the cache (if any) determine whether 
+	 * 							to update the cache.
+	 * @param currentTime 		The current time, in milliseconds since the Unix
+	 *                    		epoch.
+	 * @param context     		Optional context, {@code null} if not required.
 	 *
 	 * @return The JWK set.
 	 *
 	 * @throws KeySourceException If JWK set retrieval failed.
 	 */
-	JWKSet getJWKSet(final boolean forceReload, final long currentTime, final C context)
+	JWKSet getJWKSet(final JWKSetCacheEvaluator cacheEvaluator, final long currentTime, final C context)
 		throws KeySourceException;
 }

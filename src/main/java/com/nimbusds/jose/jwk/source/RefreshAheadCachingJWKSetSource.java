@@ -249,11 +249,21 @@ public class RefreshAheadCachingJWKSetSource<C extends SecurityContext> extends 
 
 	
 	@Override
-	public JWKSet getJWKSet(final boolean forceReload, final long currentTime, final C context) throws KeySourceException {
+	public JWKSet getJWKSet(final JWKSetCacheEvaluator cacheEvaluator, final long currentTime, final C context) throws KeySourceException {
 		CachedObject<JWKSet> cache = getCachedJWKSet();
-		if (cache == null || (forceReload && cache.getTimestamp() < currentTime) || cache.isExpired(currentTime)) {
-			return super.loadJWKSetBlocking(currentTime, context);
+		if (cache == null) {
+			return loadJWKSetBlocking(JWKSetCacheEvaluator.never(), currentTime, context);
 		}
+
+		JWKSet jwkSet = cache.get();
+		if (cacheEvaluator.performRefresh(jwkSet)) {
+			return loadJWKSetBlocking(cacheEvaluator, currentTime, context);
+		}		
+		
+		if (cache.isExpired(currentTime)) {
+			return loadJWKSetBlocking(JWKSetCacheEvaluator.optional(jwkSet), currentTime, context);
+		}
+		
 		refreshAheadOfExpiration(cache, false, currentTime, context);
 
 		return cache.get();
@@ -261,9 +271,9 @@ public class RefreshAheadCachingJWKSetSource<C extends SecurityContext> extends 
 	
 
 	@Override
-	CachedObject<JWKSet> loadJWKSetNotThreadSafe(final long currentTime, final C context) throws KeySourceException {
+	CachedObject<JWKSet> loadJWKSetNotThreadSafe(final JWKSetCacheEvaluator evaluator, final long currentTime, final C context) throws KeySourceException {
 		// Never run by two threads at the same time!
-		CachedObject<JWKSet> cache = super.loadJWKSetNotThreadSafe(currentTime, context);
+		CachedObject<JWKSet> cache = super.loadJWKSetNotThreadSafe(evaluator, currentTime, context);
 
 		if (scheduledExecutorService != null) {
 			scheduleRefreshAheadOfExpiration(cache, currentTime, context);
@@ -370,7 +380,7 @@ public class RefreshAheadCachingJWKSetSource<C extends SecurityContext> extends 
 							eventListener.notify(new ScheduledRefreshInitiatedEvent<>(that, context));
 						}
 						
-						JWKSet jwkSet = RefreshAheadCachingJWKSetSource.this.loadJWKSetBlocking(currentTime, context);
+						JWKSet jwkSet = RefreshAheadCachingJWKSetSource.this.loadJWKSetBlocking(JWKSetCacheEvaluator.always(), currentTime, context);
 						
 						if (eventListener != null) {
 							eventListener.notify(new ScheduledRefreshCompletedEvent<>(that, jwkSet, context));

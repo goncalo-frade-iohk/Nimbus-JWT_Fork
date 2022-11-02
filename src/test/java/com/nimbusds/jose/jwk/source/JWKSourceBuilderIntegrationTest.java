@@ -121,7 +121,7 @@ public class JWKSourceBuilderIntegrationTest {
 			source.get(new JWKSelector(new JWKMatcher.Builder().keyID("no-such-kid").build()), null);
 			fail();
 		} catch (KeySourceException e) {
-			assertEquals("Couldn't retrieve JWK set from URL: Connection refused (Connection refused)", e.getMessage());
+			assertTrue(e.getMessage().startsWith("Couldn't retrieve JWK set from URL: "));
 		}
 	}
 	
@@ -210,7 +210,7 @@ public class JWKSourceBuilderIntegrationTest {
 		assertTrue(outageEvents.get(0) instanceof OutageTolerantJWKSetSource.OutageEvent);
 		OutageTolerantJWKSetSource.OutageEvent outageEvent = (OutageTolerantJWKSetSource.OutageEvent) outageEvents.get(0);
 		assertTrue(outageEvent.getException() instanceof KeySourceException);
-		assertEquals("Couldn't retrieve JWK set from URL: Connection refused (Connection refused)", outageEvent.getException().getMessage());
+		assertTrue(outageEvent.getException().getMessage().startsWith("Couldn't retrieve JWK set from URL: "));
 		assertTrue(0 < outageEvent.getRemainingTime() && outageEvent.getRemainingTime() < outageTTL);
 		assertEquals(1, outageEvents.size());
 	}
@@ -285,6 +285,7 @@ public class JWKSourceBuilderIntegrationTest {
 		
 		JWKSource<SecurityContext> source = JWKSourceBuilder.create(jwkSetURL)
 			.rateLimited(false)
+			.retrying(false)
 			.cache(
 				JWKSourceBuilder.DEFAULT_CACHE_TIME_TO_LIVE,
 				JWKSourceBuilder.DEFAULT_CACHE_REFRESH_TIMEOUT,

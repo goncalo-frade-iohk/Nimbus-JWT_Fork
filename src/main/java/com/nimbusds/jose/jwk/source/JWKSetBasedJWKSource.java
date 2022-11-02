@@ -68,20 +68,23 @@ public class JWKSetBasedJWKSource<C extends SecurityContext> implements JWKSetSo
 		// So for the no-match scenario, what we have is a
 		// read-write-read type transaction. In order to identify
 		// whether another thread has already performed the write operation,
-		// the timestamp for the original read operation is passed along
+		// an evaluator for the original read operation is passed along
 		// and used internally to check whether the cache is up-to-date; preventing
 		// unnecessary external calls
 		
-		List<JWK> select = jwkSelector.select(source.getJWKSet(false, currentTime, context));
+		JWKSet jwkSet = source.getJWKSet(JWKSetCacheEvaluator.never(), currentTime, context);
+		
+		List<JWK> select = jwkSelector.select(jwkSet);
 		if (select.isEmpty()) {
-			select = jwkSelector.select(source.getJWKSet(true, currentTime, context));
+			JWKSet recentJwkSet = source.getJWKSet(JWKSetCacheEvaluator.optional(jwkSet), currentTime, context);
+			select = jwkSelector.select(recentJwkSet);
 		}
 		return select;
 	}
 	
 	
 	@Override
-	public JWKSet getJWKSet(final boolean forceReload, final long currentTime, final C context) throws KeySourceException {
+	public JWKSet getJWKSet(final JWKSetCacheEvaluator forceReload, final long currentTime, final C context) throws KeySourceException {
 		return source.getJWKSet(forceReload, currentTime, context);
 	}
 	

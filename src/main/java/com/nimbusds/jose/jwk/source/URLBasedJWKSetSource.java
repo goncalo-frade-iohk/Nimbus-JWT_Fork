@@ -37,7 +37,7 @@ import com.nimbusds.jose.util.ResourceRetriever;
  *
  * @author Thomas Rørvik Skjølberg
  * @author Vladimir Dzhuvinov
- * @version 2022-08-24
+ * @version 2022-11-22
  */
 @ThreadSafe
 public class URLBasedJWKSetSource<C extends SecurityContext> implements JWKSetSource<C> {
@@ -62,7 +62,7 @@ public class URLBasedJWKSetSource<C extends SecurityContext> implements JWKSetSo
 	
 	
 	@Override
-	public JWKSet getJWKSet(final JWKSetCacheEvaluator cacheEvaluator, final long currentTime, final C context) throws KeySourceException {
+	public JWKSet getJWKSet(final JWKSetCacheRefreshEvaluator refreshEvaluator, final long currentTime, final C context) throws KeySourceException {
 		
 		Resource resource;
 		try {

@@ -36,7 +36,7 @@ import com.nimbusds.jose.util.events.EventListener;
  *
  * @author Thomas Rørvik Skjølberg
  * @author Vladimir Dzhuvinov
- * @version 2022-08-30
+ * @version 2022-11-08
  */
 @ThreadSafe
 public class CachingJWKSetSource<C extends SecurityContext> extends AbstractCachingJWKSetSource<C> {
@@ -168,20 +168,20 @@ public class CachingJWKSetSource<C extends SecurityContext> extends AbstractCach
 
 	
 	@Override
-	public JWKSet getJWKSet(final JWKSetCacheEvaluator cacheEvaluator, final long currentTime, final C context) throws KeySourceException {
+	public JWKSet getJWKSet(final JWKSetCacheRefreshEvaluator refreshEvaluator, final long currentTime, final C context) throws KeySourceException {
 		CachedObject<JWKSet> cache = getCachedJWKSet();
 		if (cache == null) {
-			return loadJWKSetBlocking(JWKSetCacheEvaluator.never(), currentTime, context);
+			return loadJWKSetBlocking(JWKSetCacheRefreshEvaluator.noRefresh(), currentTime, context);
 		}
 
 		JWKSet jwkSet = cache.get();
-		if (cacheEvaluator.performRefresh(jwkSet)) {
-			return loadJWKSetBlocking(cacheEvaluator, currentTime, context);
-		}		
+		if (refreshEvaluator.requiresRefresh(jwkSet)) {
+			return loadJWKSetBlocking(refreshEvaluator, currentTime, context);
+		}
 		
 		if (cache.isExpired(currentTime)) {
-			return loadJWKSetBlocking(JWKSetCacheEvaluator.optional(jwkSet), currentTime, context);
-		}		
+			return loadJWKSetBlocking(JWKSetCacheRefreshEvaluator.referenceComparison(jwkSet), currentTime, context);
+		}
 
 		return cache.get();
 	}
@@ -200,15 +200,17 @@ public class CachingJWKSetSource<C extends SecurityContext> extends AbstractCach
 	/**
 	 * Loads and caches the JWK set, with blocking.
 	 *
-	 * @param currentTime The current time, in milliseconds since the Unix
-	 *                    epoch.
-	 * @param context     Optional context, {@code null} if not required.
+	 * @param refreshEvaluator The JWK set cache refresh evaluator.
+	 * @param currentTime      The current time, in milliseconds since the
+	 *                         Unix epoch.
+	 * @param context          Optional context, {@code null} if not
+	 *                         required.
 	 *
 	 * @return The loaded and cached JWK set.
 	 *
 	 * @throws KeySourceException If retrieval failed.
 	 */
-	JWKSet loadJWKSetBlocking(final JWKSetCacheEvaluator evaluator, final long currentTime, final C context)
+	JWKSet loadJWKSetBlocking(final JWKSetCacheRefreshEvaluator refreshEvaluator, final long currentTime, final C context)
 		throws KeySourceException {
 		
 		// Synchronize so that the first thread to acquire the lock
@@ -229,13 +231,13 @@ public class CachingJWKSetSource<C extends SecurityContext> extends AbstractCach
 					// We hold the lock, so safe to update it now, 
 					// Check evaluator, another thread might have already updated the JWKs
 					CachedObject<JWKSet> cachedJWKSet = getCachedJWKSet();
-					if (cachedJWKSet == null || evaluator.performRefresh(cachedJWKSet.get())) {
+					if (cachedJWKSet == null || refreshEvaluator.requiresRefresh(cachedJWKSet.get())) {
 	
 						if (eventListener != null) {
 							eventListener.notify(new RefreshInitiatedEvent<>(this, lock.getQueueLength(), context));
 						}
 						
-						CachedObject<JWKSet> result = loadJWKSetNotThreadSafe(evaluator, currentTime, context);
+						CachedObject<JWKSet> result = loadJWKSetNotThreadSafe(refreshEvaluator, currentTime, context);
 						
 						if (eventListener != null) {
 							eventListener.notify(new RefreshCompletedEvent<>(this, result.get(), lock.getQueueLength(), context));
@@ -259,14 +261,14 @@ public class CachingJWKSetSource<C extends SecurityContext> extends AbstractCach
 					try {
 						// Check evaluator, another thread have most likely already updated the JWKs
 						CachedObject<JWKSet> cachedJWKSet = getCachedJWKSet();
-						if (cachedJWKSet == null || evaluator.performRefresh(cachedJWKSet.get())) {
+						if (cachedJWKSet == null || refreshEvaluator.requiresRefresh(cachedJWKSet.get())) {
 							// Seems cache was not updated.
 							// We hold the lock, so safe to update it now
 							if (eventListener != null) {
 								eventListener.notify(new RefreshInitiatedEvent<>(this, lock.getQueueLength(), context));
 							}
 							
-							cache = loadJWKSetNotThreadSafe(evaluator, currentTime, context);
+							cache = loadJWKSetNotThreadSafe(refreshEvaluator, currentTime, context);
 							
 							if (eventListener != null) {
 								eventListener.notify(new RefreshCompletedEvent<>(this, cache.get(), lock.getQueueLength(), context));
@@ -306,21 +308,25 @@ public class CachingJWKSetSource<C extends SecurityContext> extends AbstractCach
 		}
 	}
 	
+	
 	/**
 	 * Loads the JWK set from the wrapped source and caches it. Should not
 	 * be run by more than one thread at a time.
 	 *
-	 * @param currentTime The current time, in milliseconds since the Unix
-	 *                    epoch.
+	 * @param refreshEvaluator The JWK set cache refresh evaluator.
+	 * @param currentTime      The current time, in milliseconds since the
+	 *                         Unix epoch.
+	 * @param context          Optional context, {@code null} if not
+	 *                         required.
 	 *
 	 * @return Reference to the cached JWK set.
 	 *
 	 * @throws KeySourceException If loading failed.
 	 */
-	CachedObject<JWKSet> loadJWKSetNotThreadSafe(final JWKSetCacheEvaluator evaluator, final long currentTime, final C context)
+	CachedObject<JWKSet> loadJWKSetNotThreadSafe(final JWKSetCacheRefreshEvaluator refreshEvaluator, final long currentTime, final C context)
 		throws KeySourceException {
 		
-		JWKSet jwkSet = getSource().getJWKSet(evaluator, currentTime, context);
+		JWKSet jwkSet = getSource().getJWKSet(refreshEvaluator, currentTime, context);
 
 		return cacheJWKSet(jwkSet, currentTime);
 	}

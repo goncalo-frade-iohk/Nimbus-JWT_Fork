@@ -33,7 +33,7 @@ import com.nimbusds.jose.util.events.EventListener;
  * {@linkplain JWKSetUnavailableException} the retrieval is tried once again.
  *
  * @author Thomas Rørvik Skjølberg
- * @version 2022-08-28
+ * @version 2022-11-22
  */
 @ThreadSafe
 public class RetryingJWKSetSource<C extends SecurityContext> extends JWKSetSourceWrapper<C> {
@@ -85,18 +85,18 @@ public class RetryingJWKSetSource<C extends SecurityContext> extends JWKSetSourc
 
 	
 	@Override
-	public JWKSet getJWKSet(final JWKSetCacheEvaluator cacheEvaluator, final long currentTime, final C context)
+	public JWKSet getJWKSet(final JWKSetCacheRefreshEvaluator refreshEvaluator, final long currentTime, final C context)
 		throws KeySourceException {
 		
 		try {
-			return getSource().getJWKSet(cacheEvaluator, currentTime, context);
+			return getSource().getJWKSet(refreshEvaluator, currentTime, context);
 			
 		} catch (JWKSetUnavailableException e) {
 			// assume transient network issue, retry once
 			if (eventListener != null) {
 				eventListener.notify(new RetrialEvent<C>(this, e, context));
 			}
-			return getSource().getJWKSet(cacheEvaluator, currentTime, context);
+			return getSource().getJWKSet(refreshEvaluator, currentTime, context);
 		}
 	}
 }

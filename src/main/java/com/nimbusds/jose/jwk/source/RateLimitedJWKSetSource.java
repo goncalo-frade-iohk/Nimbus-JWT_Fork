@@ -37,7 +37,7 @@ import com.nimbusds.jose.util.events.EventListener;
  *
  * @author Thomas Rørvik Skjølberg
  * @author Vladimir Dzhuvinov
- * @version 2022-08-28
+ * @version 2022-11-22
  */
 @ThreadSafe
 public class RateLimitedJWKSetSource<C extends SecurityContext> extends JWKSetSourceWrapper<C> {
@@ -79,7 +79,7 @@ public class RateLimitedJWKSetSource<C extends SecurityContext> extends JWKSetSo
 	
 	
 	@Override
-	public JWKSet getJWKSet(final JWKSetCacheEvaluator cacheEvaluator, final long currentTime, final C context)
+	public JWKSet getJWKSet(final JWKSetCacheRefreshEvaluator refreshEvaluator, final long currentTime, final C context)
 		throws KeySourceException {
 		
 		// implementation note: this code is not intended to run many parallel threads
@@ -104,7 +104,7 @@ public class RateLimitedJWKSetSource<C extends SecurityContext> extends JWKSetSo
 			}
 			throw new RateLimitReachedException();
 		}
-		return getSource().getJWKSet(cacheEvaluator, currentTime, context);
+		return getSource().getJWKSet(refreshEvaluator, currentTime, context);
 	}
 	
 	

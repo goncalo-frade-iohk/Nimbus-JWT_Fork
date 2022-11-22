@@ -124,7 +124,7 @@ public class RefreshAheadCachingJWKSetSourceTest extends AbstractWrappedJWKSetSo
 			setUp(withListener);
 			
 			when(wrappedJWKSetSource.getJWKSet(anyJWKSetCacheEvaluator(), anyLong(), anySecurityContext())).thenReturn(jwkSet);
-			assertEquals(jwkSet, source.getJWKSet(JWKSetCacheEvaluator.never(), System.currentTimeMillis(), context));
+			assertEquals(jwkSet, source.getJWKSet(JWKSetCacheRefreshEvaluator.noRefresh(), System.currentTimeMillis(), context));
 			
 			if (withListener) {
 				assertTrue(events.get(0) instanceof CachingJWKSetSource.RefreshInitiatedEvent);
@@ -142,8 +142,8 @@ public class RefreshAheadCachingJWKSetSourceTest extends AbstractWrappedJWKSetSo
 		setUp(false);
 			
 		when(wrappedJWKSetSource.getJWKSet(anyJWKSetCacheEvaluator(), anyLong(), anySecurityContext())).thenReturn(jwkSet).thenThrow(new JWKSetUnavailableException("TEST!", null));
-		source.getJWKSet(JWKSetCacheEvaluator.never(), System.currentTimeMillis(), context);
-		assertEquals(jwkSet, source.getJWKSet(JWKSetCacheEvaluator.never(), System.currentTimeMillis(), context));
+		source.getJWKSet(JWKSetCacheRefreshEvaluator.noRefresh(), System.currentTimeMillis(), context);
+		assertEquals(jwkSet, source.getJWKSet(JWKSetCacheRefreshEvaluator.noRefresh(), System.currentTimeMillis(), context));
 		verify(wrappedJWKSetSource, only()).getJWKSet(anyJWKSetCacheEvaluator(), anyLong(), anySecurityContext());
 	}
 
@@ -153,13 +153,13 @@ public class RefreshAheadCachingJWKSetSourceTest extends AbstractWrappedJWKSetSo
 		setUp(true);
 		
 		when(wrappedJWKSetSource.getJWKSet(anyJWKSetCacheEvaluator(), anyLong(), anySecurityContext())).thenReturn(jwkSet).thenThrow(new JWKSetUnavailableException("TEST!", null));
-		assertEquals(jwkSet, source.getJWKSet(JWKSetCacheEvaluator.never(), System.currentTimeMillis(), context));
+		assertEquals(jwkSet, source.getJWKSet(JWKSetCacheRefreshEvaluator.noRefresh(), System.currentTimeMillis(), context));
 		
 		assertTrue(events.get(0) instanceof CachingJWKSetSource.RefreshInitiatedEvent);
 		assertTrue(events.get(1) instanceof CachingJWKSetSource.RefreshCompletedEvent);
 		assertEquals(2, events.size());
 		
-		assertEquals(jwkSet, source.getJWKSet(JWKSetCacheEvaluator.never(), System.currentTimeMillis(), context));
+		assertEquals(jwkSet, source.getJWKSet(JWKSetCacheRefreshEvaluator.noRefresh(), System.currentTimeMillis(), context));
 		verify(wrappedJWKSetSource, only()).getJWKSet(anyJWKSetCacheEvaluator(), anyLong(), anySecurityContext());
 		
 		assertEquals(2, events.size());
@@ -176,11 +176,11 @@ public class RefreshAheadCachingJWKSetSourceTest extends AbstractWrappedJWKSetSo
 		when(wrappedJWKSetSource.getJWKSet(anyJWKSetCacheEvaluator(), anyLong(), anySecurityContext())).thenReturn(first).thenReturn(second);
 
 		// first
-		assertEquals(first, source.getJWKSet(JWKSetCacheEvaluator.never(), System.currentTimeMillis(), context));
+		assertEquals(first, source.getJWKSet(JWKSetCacheRefreshEvaluator.noRefresh(), System.currentTimeMillis(), context));
 		verify(wrappedJWKSetSource, only()).getJWKSet(anyJWKSetCacheEvaluator(), anyLong(), anySecurityContext());
 
 		// second
-		assertEquals(second, source.getJWKSet(JWKSetCacheEvaluator.never(), CachedObject.computeExpirationTime(System.currentTimeMillis() + 1, source.getTimeToLive()), context));
+		assertEquals(second, source.getJWKSet(JWKSetCacheRefreshEvaluator.noRefresh(), CachedObject.computeExpirationTime(System.currentTimeMillis() + 1, source.getTimeToLive()), context));
 		verify(wrappedJWKSetSource, times(2)).getJWKSet(anyJWKSetCacheEvaluator(), anyLong(), anySecurityContext());
 	}
 
@@ -195,7 +195,7 @@ public class RefreshAheadCachingJWKSetSourceTest extends AbstractWrappedJWKSetSo
 		when(wrappedJWKSetSource.getJWKSet(anyJWKSetCacheEvaluator(), anyLong(), anySecurityContext())).thenReturn(first).thenReturn(second);
 
 		// first
-		assertEquals(first, source.getJWKSet(JWKSetCacheEvaluator.never(), System.currentTimeMillis(), context));
+		assertEquals(first, source.getJWKSet(JWKSetCacheRefreshEvaluator.noRefresh(), System.currentTimeMillis(), context));
 		verify(wrappedJWKSetSource, only()).getJWKSet(anyJWKSetCacheEvaluator(), anyLong(), anySecurityContext());
 		
 		assertTrue(events.get(0) instanceof CachingJWKSetSource.RefreshInitiatedEvent);
@@ -203,7 +203,7 @@ public class RefreshAheadCachingJWKSetSourceTest extends AbstractWrappedJWKSetSo
 		assertEquals(2, events.size());
 
 		// second
-		assertEquals(second, source.getJWKSet(JWKSetCacheEvaluator.never(), CachedObject.computeExpirationTime(System.currentTimeMillis() + 1, source.getTimeToLive()), context));
+		assertEquals(second, source.getJWKSet(JWKSetCacheRefreshEvaluator.noRefresh(), CachedObject.computeExpirationTime(System.currentTimeMillis() + 1, source.getTimeToLive()), context));
 		verify(wrappedJWKSetSource, times(2)).getJWKSet(anyJWKSetCacheEvaluator(), anyLong(), anySecurityContext());
 		
 		assertTrue(events.get(0) instanceof CachingJWKSetSource.RefreshInitiatedEvent);
@@ -217,10 +217,10 @@ public class RefreshAheadCachingJWKSetSourceTest extends AbstractWrappedJWKSetSo
 	public void doNotReturnExpiredOnFailedRefresh() throws Exception {
 		setUp(false);
 		when(wrappedJWKSetSource.getJWKSet(anyJWKSetCacheEvaluator(), anyLong(), anySecurityContext())).thenReturn(jwkSet).thenThrow(new KeySourceException("TEST!", null));
-		assertEquals(jwkSet, source.getJWKSet(JWKSetCacheEvaluator.never(), System.currentTimeMillis(), context));
+		assertEquals(jwkSet, source.getJWKSet(JWKSetCacheRefreshEvaluator.noRefresh(), System.currentTimeMillis(), context));
 
 		try {
-			source.getJWKSet(JWKSetCacheEvaluator.never(), CachedObject.computeExpirationTime(System.currentTimeMillis() + 1, source.getTimeToLive()), context);
+			source.getJWKSet(JWKSetCacheRefreshEvaluator.noRefresh(), CachedObject.computeExpirationTime(System.currentTimeMillis() + 1, source.getTimeToLive()), context);
 			fail();
 		} catch(KeySourceException e) {
 			assertEquals("TEST!", e.getMessage());
@@ -231,14 +231,14 @@ public class RefreshAheadCachingJWKSetSourceTest extends AbstractWrappedJWKSetSo
 	public void doNotReturnExpiredOnFailedRefresh_withListener() throws Exception {
 		setUp(true);
 		when(wrappedJWKSetSource.getJWKSet(anyJWKSetCacheEvaluator(), anyLong(), anySecurityContext())).thenReturn(jwkSet).thenThrow(new KeySourceException("TEST!", null));
-		assertEquals(jwkSet, source.getJWKSet(JWKSetCacheEvaluator.never(), System.currentTimeMillis(), context));
+		assertEquals(jwkSet, source.getJWKSet(JWKSetCacheRefreshEvaluator.noRefresh(), System.currentTimeMillis(), context));
 		
 		assertTrue(events.get(0) instanceof CachingJWKSetSource.RefreshInitiatedEvent);
 		assertTrue(events.get(1) instanceof CachingJWKSetSource.RefreshCompletedEvent);
 		assertEquals(2, events.size());
 
 		try {
-			source.getJWKSet(JWKSetCacheEvaluator.never(), CachedObject.computeExpirationTime(System.currentTimeMillis() + 1, source.getTimeToLive()), context);
+			source.getJWKSet(JWKSetCacheRefreshEvaluator.noRefresh(), CachedObject.computeExpirationTime(System.currentTimeMillis() + 1, source.getTimeToLive()), context);
 			fail();
 		} catch(KeySourceException e) {
 			assertEquals("TEST!", e.getMessage());
@@ -416,7 +416,7 @@ public class RefreshAheadCachingJWKSetSourceTest extends AbstractWrappedJWKSetSo
 		long justBeforeExpiry = CachedObject.computeExpirationTime(System.currentTimeMillis(), source.getTimeToLive()) - TimeUnit.SECONDS.toMillis(5);
 		verify(wrappedJWKSetSource, only()).getJWKSet(anyJWKSetCacheEvaluator(), anyLong(), anySecurityContext());
 
-		JWKSet justBeforeExpiryKeys = source.getJWKSet(JWKSetCacheEvaluator.never(), justBeforeExpiry, context);
+		JWKSet justBeforeExpiryKeys = source.getJWKSet(JWKSetCacheRefreshEvaluator.noRefresh(), justBeforeExpiry, context);
 		assertFalse(justBeforeExpiryKeys.isEmpty());
 		assertEquals(first.getKeys(), justBeforeExpiryKeys.getKeys()); // triggers a refresh ahead of expiration
 
@@ -457,7 +457,7 @@ public class RefreshAheadCachingJWKSetSourceTest extends AbstractWrappedJWKSetSo
 		long justBeforeExpiry = CachedObject.computeExpirationTime(System.currentTimeMillis(), source.getTimeToLive()) - TimeUnit.SECONDS.toMillis(5);
 		verify(wrappedJWKSetSource, only()).getJWKSet(anyJWKSetCacheEvaluator(), anyLong(), anySecurityContext());
 
-		JWKSet justBeforeExpiryKeys = source.getJWKSet(JWKSetCacheEvaluator.never(), justBeforeExpiry, context);
+		JWKSet justBeforeExpiryKeys = source.getJWKSet(JWKSetCacheRefreshEvaluator.noRefresh(), justBeforeExpiry, context);
 		assertFalse(justBeforeExpiryKeys.isEmpty());
 		assertEquals(first.getKeys(), justBeforeExpiryKeys.getKeys()); // triggers a refresh ahead of expiration
 
@@ -501,7 +501,7 @@ public class RefreshAheadCachingJWKSetSourceTest extends AbstractWrappedJWKSetSo
 
 		long justBeforeExpiry = CachedObject.computeExpirationTime(System.currentTimeMillis(), source.getTimeToLive()) - TimeUnit.SECONDS.toMillis(5);
 
-		assertEquals(first, source.getJWKSet(JWKSetCacheEvaluator.never(), justBeforeExpiry, context)); // triggers a scheduled refresh attempt
+		assertEquals(first, source.getJWKSet(JWKSetCacheRefreshEvaluator.noRefresh(), justBeforeExpiry, context)); // triggers a scheduled refresh attempt
 
 		source.getExecutorService().awaitTermination(1, TimeUnit.SECONDS);
 
@@ -542,7 +542,7 @@ public class RefreshAheadCachingJWKSetSourceTest extends AbstractWrappedJWKSetSo
 
 		long justBeforeExpiry = CachedObject.computeExpirationTime(System.currentTimeMillis(), source.getTimeToLive()) - TimeUnit.SECONDS.toMillis(5);
 
-		assertEquals(first, source.getJWKSet(JWKSetCacheEvaluator.never(), justBeforeExpiry, context)); // triggers a scheduled refresh attempt
+		assertEquals(first, source.getJWKSet(JWKSetCacheRefreshEvaluator.noRefresh(), justBeforeExpiry, context)); // triggers a scheduled refresh attempt
 
 		source.getExecutorService().awaitTermination(1, TimeUnit.SECONDS);
 		
@@ -585,11 +585,11 @@ public class RefreshAheadCachingJWKSetSourceTest extends AbstractWrappedJWKSetSo
 
 		long justBeforeExpiry = CachedObject.computeExpirationTime(System.currentTimeMillis(), source.getTimeToLive()) - TimeUnit.SECONDS.toMillis(5);
 
-		assertEquals(first, source.getJWKSet(JWKSetCacheEvaluator.never(), justBeforeExpiry, context)); // triggers a scheduled refresh attempt
+		assertEquals(first, source.getJWKSet(JWKSetCacheRefreshEvaluator.noRefresh(), justBeforeExpiry, context)); // triggers a scheduled refresh attempt
 
 		source.getExecutorService().awaitTermination(1, TimeUnit.SECONDS);
 
-		assertEquals(first, source.getJWKSet(JWKSetCacheEvaluator.never(), justBeforeExpiry, context)); // triggers another scheduled refresh attempt
+		assertEquals(first, source.getJWKSet(JWKSetCacheRefreshEvaluator.noRefresh(), justBeforeExpiry, context)); // triggers another scheduled refresh attempt
 
 		source.getExecutorService().awaitTermination(1, TimeUnit.SECONDS);
 
@@ -626,7 +626,7 @@ public class RefreshAheadCachingJWKSetSourceTest extends AbstractWrappedJWKSetSo
 
 		long justBeforeExpiry = CachedObject.computeExpirationTime(System.currentTimeMillis(), source.getTimeToLive()) - TimeUnit.SECONDS.toMillis(5);
 
-		assertEquals(first, source.getJWKSet(JWKSetCacheEvaluator.never(), justBeforeExpiry, context)); // triggers a scheduled refresh attempt
+		assertEquals(first, source.getJWKSet(JWKSetCacheRefreshEvaluator.noRefresh(), justBeforeExpiry, context)); // triggers a scheduled refresh attempt
 
 		source.getExecutorService().awaitTermination(1, TimeUnit.SECONDS);
 		
@@ -635,7 +635,7 @@ public class RefreshAheadCachingJWKSetSourceTest extends AbstractWrappedJWKSetSo
 		assertTrue(events.get(4) instanceof RefreshAheadCachingJWKSetSource.UnableToRefreshAheadOfExpirationEvent);
 		assertEquals(5, events.size());
 
-		assertEquals(first, source.getJWKSet(JWKSetCacheEvaluator.never(), justBeforeExpiry, context)); // triggers another scheduled refresh attempt
+		assertEquals(first, source.getJWKSet(JWKSetCacheRefreshEvaluator.noRefresh(), justBeforeExpiry, context)); // triggers another scheduled refresh attempt
 
 		source.getExecutorService().awaitTermination(1, TimeUnit.SECONDS);
 
@@ -662,7 +662,7 @@ public class RefreshAheadCachingJWKSetSourceTest extends AbstractWrappedJWKSetSo
 		
 		when(wrappedJWKSetSource.getJWKSet(anyJWKSetCacheEvaluator(), anyLong(), anySecurityContext())).thenReturn(jwkSet);
 		
-		assertEquals(jwkSet, source.getJWKSet(JWKSetCacheEvaluator.never(), System.currentTimeMillis(), context));
+		assertEquals(jwkSet, source.getJWKSet(JWKSetCacheRefreshEvaluator.noRefresh(), System.currentTimeMillis(), context));
 
 		long justBeforeExpiry = CachedObject.computeExpirationTime(System.currentTimeMillis(), source.getTimeToLive()) - TimeUnit.SECONDS.toMillis(5);
 
@@ -670,7 +670,7 @@ public class RefreshAheadCachingJWKSetSourceTest extends AbstractWrappedJWKSetSo
 		try {
 			helper.begin();
 			
-			assertEquals(jwkSet, source.getJWKSet(JWKSetCacheEvaluator.never(), justBeforeExpiry, context)); // wants to update, but can't get lock
+			assertEquals(jwkSet, source.getJWKSet(JWKSetCacheRefreshEvaluator.noRefresh(), justBeforeExpiry, context)); // wants to update, but can't get lock
 
 			verify(wrappedJWKSetSource, only()).getJWKSet(anyJWKSetCacheEvaluator(), anyLong(), anySecurityContext());
 		} finally {
@@ -685,7 +685,7 @@ public class RefreshAheadCachingJWKSetSourceTest extends AbstractWrappedJWKSetSo
 		
 		when(wrappedJWKSetSource.getJWKSet(anyJWKSetCacheEvaluator(), anyLong(), anySecurityContext())).thenReturn(jwkSet);
 
-		assertEquals(jwkSet, source.getJWKSet(JWKSetCacheEvaluator.never(), System.currentTimeMillis(), context));
+		assertEquals(jwkSet, source.getJWKSet(JWKSetCacheRefreshEvaluator.noRefresh(), System.currentTimeMillis(), context));
 		
 		assertTrue(events.get(0) instanceof CachingJWKSetSource.RefreshInitiatedEvent);
 		assertTrue(events.get(1) instanceof CachingJWKSetSource.RefreshCompletedEvent);
@@ -697,7 +697,7 @@ public class RefreshAheadCachingJWKSetSourceTest extends AbstractWrappedJWKSetSo
 		try {
 			helper.begin();
 
-			assertEquals(jwkSet, source.getJWKSet(JWKSetCacheEvaluator.never(), justBeforeExpiry, context)); // wants to update, but can't get lock
+			assertEquals(jwkSet, source.getJWKSet(JWKSetCacheRefreshEvaluator.noRefresh(), justBeforeExpiry, context)); // wants to update, but can't get lock
 
 			verify(wrappedJWKSetSource, only()).getJWKSet(anyJWKSetCacheEvaluator(), anyLong(), anySecurityContext());
 		} finally {

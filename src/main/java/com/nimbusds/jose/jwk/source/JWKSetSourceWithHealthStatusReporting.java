@@ -35,7 +35,7 @@ import com.nimbusds.jose.util.health.HealthStatus;
  *
  * @author Thomas Rørvik Skjølberg
  * @author Vladimir Dzhuvinov
- * @version 2022-08-29
+ * @version 2022-11-22
  */
 @ThreadSafe
 public class JWKSetSourceWithHealthStatusReporting<C extends SecurityContext> extends JWKSetSourceWrapper<C> {
@@ -62,12 +62,12 @@ public class JWKSetSourceWithHealthStatusReporting<C extends SecurityContext> ex
 	
 	
 	@Override
-	public JWKSet getJWKSet(final JWKSetCacheEvaluator cacheEvaluator, final long currentTime, final C context)
+	public JWKSet getJWKSet(final JWKSetCacheRefreshEvaluator refreshEvaluator, final long currentTime, final C context)
 		throws KeySourceException {
 		
 		JWKSet jwkSet;
 		try {
-			jwkSet = getSource().getJWKSet(cacheEvaluator, currentTime, context);
+			jwkSet = getSource().getJWKSet(refreshEvaluator, currentTime, context);
 			healthReportListener.notify(new HealthReport<>(this, HealthStatus.HEALTHY, currentTime, context));
 		} catch (Exception e) {
 			healthReportListener.notify(new HealthReport<>(this, HealthStatus.NOT_HEALTHY, e, currentTime, context));

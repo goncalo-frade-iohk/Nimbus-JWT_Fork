@@ -44,7 +44,7 @@ import com.nimbusds.jose.util.events.EventListener;
  *
  * @author Thomas Rørvik Skjølberg
  * @author Vladimir Dzhuvinov
- * @version 2022-08-28
+ * @version 2022-11-22
  */
 @ThreadSafe
 public class RefreshAheadCachingJWKSetSource<C extends SecurityContext> extends CachingJWKSetSource<C> {
@@ -249,19 +249,19 @@ public class RefreshAheadCachingJWKSetSource<C extends SecurityContext> extends 
 
 	
 	@Override
-	public JWKSet getJWKSet(final JWKSetCacheEvaluator cacheEvaluator, final long currentTime, final C context) throws KeySourceException {
+	public JWKSet getJWKSet(final JWKSetCacheRefreshEvaluator refreshEvaluator, final long currentTime, final C context) throws KeySourceException {
 		CachedObject<JWKSet> cache = getCachedJWKSet();
 		if (cache == null) {
-			return loadJWKSetBlocking(JWKSetCacheEvaluator.never(), currentTime, context);
+			return loadJWKSetBlocking(JWKSetCacheRefreshEvaluator.noRefresh(), currentTime, context);
 		}
 
 		JWKSet jwkSet = cache.get();
-		if (cacheEvaluator.performRefresh(jwkSet)) {
-			return loadJWKSetBlocking(cacheEvaluator, currentTime, context);
+		if (refreshEvaluator.requiresRefresh(jwkSet)) {
+			return loadJWKSetBlocking(refreshEvaluator, currentTime, context);
 		}		
 		
 		if (cache.isExpired(currentTime)) {
-			return loadJWKSetBlocking(JWKSetCacheEvaluator.optional(jwkSet), currentTime, context);
+			return loadJWKSetBlocking(JWKSetCacheRefreshEvaluator.referenceComparison(jwkSet), currentTime, context);
 		}
 		
 		refreshAheadOfExpiration(cache, false, currentTime, context);
@@ -271,9 +271,9 @@ public class RefreshAheadCachingJWKSetSource<C extends SecurityContext> extends 
 	
 
 	@Override
-	CachedObject<JWKSet> loadJWKSetNotThreadSafe(final JWKSetCacheEvaluator evaluator, final long currentTime, final C context) throws KeySourceException {
+	CachedObject<JWKSet> loadJWKSetNotThreadSafe(final JWKSetCacheRefreshEvaluator refreshEvaluator, final long currentTime, final C context) throws KeySourceException {
 		// Never run by two threads at the same time!
-		CachedObject<JWKSet> cache = super.loadJWKSetNotThreadSafe(evaluator, currentTime, context);
+		CachedObject<JWKSet> cache = super.loadJWKSetNotThreadSafe(refreshEvaluator, currentTime, context);
 
 		if (scheduledExecutorService != null) {
 			scheduleRefreshAheadOfExpiration(cache, currentTime, context);
@@ -380,7 +380,7 @@ public class RefreshAheadCachingJWKSetSource<C extends SecurityContext> extends 
 							eventListener.notify(new ScheduledRefreshInitiatedEvent<>(that, context));
 						}
 						
-						JWKSet jwkSet = RefreshAheadCachingJWKSetSource.this.loadJWKSetBlocking(JWKSetCacheEvaluator.always(), currentTime, context);
+						JWKSet jwkSet = RefreshAheadCachingJWKSetSource.this.loadJWKSetBlocking(JWKSetCacheRefreshEvaluator.forceRefresh(), currentTime, context);
 						
 						if (eventListener != null) {
 							eventListener.notify(new ScheduledRefreshCompletedEvent<>(that, jwkSet, context));

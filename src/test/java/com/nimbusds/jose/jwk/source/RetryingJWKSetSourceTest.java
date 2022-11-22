@@ -52,64 +52,64 @@ public class RetryingJWKSetSourceTest extends AbstractWrappedJWKSetSourceTest {
 	@Test
 	public void success() throws Exception {
 		source = new RetryingJWKSetSource<>(wrappedJWKSetSource, null);
-		when(wrappedJWKSetSource.getJWKSet(eq(JWKSetCacheEvaluator.never()), anyLong(), anySecurityContext())).thenReturn(jwkSet);
-		assertEquals(jwkSet, source.getJWKSet(JWKSetCacheEvaluator.never(), System.currentTimeMillis(), context));
-		verify(wrappedJWKSetSource, times(1)).getJWKSet(eq(JWKSetCacheEvaluator.never()), anyLong(), anySecurityContext());
+		when(wrappedJWKSetSource.getJWKSet(eq(JWKSetCacheRefreshEvaluator.noRefresh()), anyLong(), anySecurityContext())).thenReturn(jwkSet);
+		assertEquals(jwkSet, source.getJWKSet(JWKSetCacheRefreshEvaluator.noRefresh(), System.currentTimeMillis(), context));
+		verify(wrappedJWKSetSource, times(1)).getJWKSet(eq(JWKSetCacheRefreshEvaluator.noRefresh()), anyLong(), anySecurityContext());
 	}
 
 	@Test
 	public void success_withListener() throws Exception {
 		source = new RetryingJWKSetSource<>(wrappedJWKSetSource, eventListener);
-		when(wrappedJWKSetSource.getJWKSet(eq(JWKSetCacheEvaluator.never()), anyLong(), anySecurityContext())).thenReturn(jwkSet);
-		assertEquals(jwkSet, source.getJWKSet(JWKSetCacheEvaluator.never(), System.currentTimeMillis(), context));
-		verify(wrappedJWKSetSource, times(1)).getJWKSet(eq(JWKSetCacheEvaluator.never()), anyLong(), anySecurityContext());
+		when(wrappedJWKSetSource.getJWKSet(eq(JWKSetCacheRefreshEvaluator.noRefresh()), anyLong(), anySecurityContext())).thenReturn(jwkSet);
+		assertEquals(jwkSet, source.getJWKSet(JWKSetCacheRefreshEvaluator.noRefresh(), System.currentTimeMillis(), context));
+		verify(wrappedJWKSetSource, times(1)).getJWKSet(eq(JWKSetCacheRefreshEvaluator.noRefresh()), anyLong(), anySecurityContext());
 		assertTrue(events.isEmpty());
 	}
 
 	@Test
 	public void retryWhenUnavailable() throws Exception {
 		source = new RetryingJWKSetSource<>(wrappedJWKSetSource, null);
-		when(wrappedJWKSetSource.getJWKSet(eq(JWKSetCacheEvaluator.never()), anyLong(), anySecurityContext())).thenThrow(new JWKSetUnavailableException("TEST!", null)).thenReturn(jwkSet);
-		assertEquals(jwkSet, source.getJWKSet(JWKSetCacheEvaluator.never(), System.currentTimeMillis(), context));
-		verify(wrappedJWKSetSource, times(2)).getJWKSet(eq(JWKSetCacheEvaluator.never()), anyLong(), anySecurityContext());
+		when(wrappedJWKSetSource.getJWKSet(eq(JWKSetCacheRefreshEvaluator.noRefresh()), anyLong(), anySecurityContext())).thenThrow(new JWKSetUnavailableException("TEST!", null)).thenReturn(jwkSet);
+		assertEquals(jwkSet, source.getJWKSet(JWKSetCacheRefreshEvaluator.noRefresh(), System.currentTimeMillis(), context));
+		verify(wrappedJWKSetSource, times(2)).getJWKSet(eq(JWKSetCacheRefreshEvaluator.noRefresh()), anyLong(), anySecurityContext());
 	}
 
 	@Test
 	public void retryWhenUnavailable_withListener() throws Exception {
 		source = new RetryingJWKSetSource<>(wrappedJWKSetSource, eventListener);
-		when(wrappedJWKSetSource.getJWKSet(eq(JWKSetCacheEvaluator.never()), anyLong(), anySecurityContext())).thenThrow(new JWKSetUnavailableException("TEST!", null)).thenReturn(jwkSet);
-		assertEquals(jwkSet, source.getJWKSet(JWKSetCacheEvaluator.never(), System.currentTimeMillis(), context));
-		verify(wrappedJWKSetSource, times(2)).getJWKSet(eq(JWKSetCacheEvaluator.never()), anyLong(), anySecurityContext());
+		when(wrappedJWKSetSource.getJWKSet(eq(JWKSetCacheRefreshEvaluator.noRefresh()), anyLong(), anySecurityContext())).thenThrow(new JWKSetUnavailableException("TEST!", null)).thenReturn(jwkSet);
+		assertEquals(jwkSet, source.getJWKSet(JWKSetCacheRefreshEvaluator.noRefresh(), System.currentTimeMillis(), context));
+		verify(wrappedJWKSetSource, times(2)).getJWKSet(eq(JWKSetCacheRefreshEvaluator.noRefresh()), anyLong(), anySecurityContext());
 		assertEquals(1, events.size());
 	}
 
 	@Test
 	public void doNotRetryMoreThanOnce() throws Exception {
 		source = new RetryingJWKSetSource<>(wrappedJWKSetSource, null);
-		when(wrappedJWKSetSource.getJWKSet(eq(JWKSetCacheEvaluator.never()), anyLong(), anySecurityContext())).thenThrow(new JWKSetUnavailableException("TEST!", null));
+		when(wrappedJWKSetSource.getJWKSet(eq(JWKSetCacheRefreshEvaluator.noRefresh()), anyLong(), anySecurityContext())).thenThrow(new JWKSetUnavailableException("TEST!", null));
 
 		try {
-			source.getJWKSet(JWKSetCacheEvaluator.never(), System.currentTimeMillis(), context);
+			source.getJWKSet(JWKSetCacheRefreshEvaluator.noRefresh(), System.currentTimeMillis(), context);
 			fail();
 		} catch(JWKSetUnavailableException e) {
 			assertEquals("TEST!", e.getMessage());
 		} finally {
-			verify(wrappedJWKSetSource, times(2)).getJWKSet(eq(JWKSetCacheEvaluator.never()), anyLong(), anySecurityContext());
+			verify(wrappedJWKSetSource, times(2)).getJWKSet(eq(JWKSetCacheRefreshEvaluator.noRefresh()), anyLong(), anySecurityContext());
 		}
 	}
 
 	@Test
 	public void doNotRetryMoreThanOnce_withListener() throws Exception {
 		source = new RetryingJWKSetSource<>(wrappedJWKSetSource, eventListener);
-		when(wrappedJWKSetSource.getJWKSet(eq(JWKSetCacheEvaluator.never()), anyLong(), anySecurityContext())).thenThrow(new JWKSetUnavailableException("TEST!", null));
+		when(wrappedJWKSetSource.getJWKSet(eq(JWKSetCacheRefreshEvaluator.noRefresh()), anyLong(), anySecurityContext())).thenThrow(new JWKSetUnavailableException("TEST!", null));
 
 		try {
-			source.getJWKSet(JWKSetCacheEvaluator.never(), System.currentTimeMillis(), context);
+			source.getJWKSet(JWKSetCacheRefreshEvaluator.noRefresh(), System.currentTimeMillis(), context);
 			fail();
 		} catch(JWKSetUnavailableException e) {
 			assertEquals("TEST!", e.getMessage());
 		} finally {
-			verify(wrappedJWKSetSource, times(2)).getJWKSet(eq(JWKSetCacheEvaluator.never()), anyLong(), anySecurityContext());
+			verify(wrappedJWKSetSource, times(2)).getJWKSet(eq(JWKSetCacheRefreshEvaluator.noRefresh()), anyLong(), anySecurityContext());
 		}
 		assertEquals(1, events.size());
 	}

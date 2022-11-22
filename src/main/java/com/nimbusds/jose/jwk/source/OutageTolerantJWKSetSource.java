@@ -38,7 +38,7 @@ import com.nimbusds.jose.util.events.EventListener;
  *
  * @author Thomas Rørvik Skjølberg
  * @author Vladimir Dzhuvinov
- * @version 2022-08-30
+ * @version 2022-11-22
  */
 @ThreadSafe
 public class OutageTolerantJWKSetSource<C extends SecurityContext> extends AbstractCachingJWKSetSource<C> {
@@ -107,10 +107,10 @@ public class OutageTolerantJWKSetSource<C extends SecurityContext> extends Abstr
 
 	
 	@Override
-	public JWKSet getJWKSet(final JWKSetCacheEvaluator cacheEvaluator, final long currentTime, final C context) throws KeySourceException {
+	public JWKSet getJWKSet(final JWKSetCacheRefreshEvaluator refreshEvaluator, final long currentTime, final C context) throws KeySourceException {
 		try {
 			// cache if successfully refreshed by the underlying source
-			JWKSet jwkSet = getSource().getJWKSet(cacheEvaluator, currentTime, context);
+			JWKSet jwkSet = getSource().getJWKSet(refreshEvaluator, currentTime, context);
 			cacheJWKSet(jwkSet, currentTime);
 			return jwkSet;
 			

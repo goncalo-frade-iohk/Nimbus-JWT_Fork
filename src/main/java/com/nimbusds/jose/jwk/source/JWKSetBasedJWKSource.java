@@ -36,7 +36,7 @@ import com.nimbusds.jose.proc.SecurityContext;
  *
  * @author Thomas Rørvik Skjølberg
  * @author Vladimir Dzhuvinov
- * @version 2022-08-24
+ * @version 2022-11-22
  */
 @ThreadSafe
 public class JWKSetBasedJWKSource<C extends SecurityContext> implements JWKSetSource<C>, JWKSource<C> {
@@ -72,11 +72,11 @@ public class JWKSetBasedJWKSource<C extends SecurityContext> implements JWKSetSo
 		// and used internally to check whether the cache is up-to-date; preventing
 		// unnecessary external calls
 		
-		JWKSet jwkSet = source.getJWKSet(JWKSetCacheEvaluator.never(), currentTime, context);
+		JWKSet jwkSet = source.getJWKSet(JWKSetCacheRefreshEvaluator.noRefresh(), currentTime, context);
 		
 		List<JWK> select = jwkSelector.select(jwkSet);
 		if (select.isEmpty()) {
-			JWKSet recentJwkSet = source.getJWKSet(JWKSetCacheEvaluator.optional(jwkSet), currentTime, context);
+			JWKSet recentJwkSet = source.getJWKSet(JWKSetCacheRefreshEvaluator.referenceComparison(jwkSet), currentTime, context);
 			select = jwkSelector.select(recentJwkSet);
 		}
 		return select;
@@ -84,8 +84,8 @@ public class JWKSetBasedJWKSource<C extends SecurityContext> implements JWKSetSo
 	
 	
 	@Override
-	public JWKSet getJWKSet(final JWKSetCacheEvaluator forceReload, final long currentTime, final C context) throws KeySourceException {
-		return source.getJWKSet(forceReload, currentTime, context);
+	public JWKSet getJWKSet(final JWKSetCacheRefreshEvaluator refreshEvaluator, final long currentTime, final C context) throws KeySourceException {
+		return source.getJWKSet(refreshEvaluator, currentTime, context);
 	}
 	
 	

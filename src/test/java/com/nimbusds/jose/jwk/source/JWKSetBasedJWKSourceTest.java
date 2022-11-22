@@ -136,7 +136,7 @@ public class JWKSetBasedJWKSourceTest {
 		assertEquals(1, matches.size());
 
 		JWKSetSource<SecurityContext> provider = jwkSetSource.getJWKSetSource();
-		JWKSet out = provider.getJWKSet(JWKSetCacheEvaluator.never(), System.currentTimeMillis(), new SimpleSecurityContext());
+		JWKSet out = provider.getJWKSet(JWKSetCacheRefreshEvaluator.noRefresh(), System.currentTimeMillis(), new SimpleSecurityContext());
 		assertTrue(out.getKeys().get(0) instanceof RSAKey);
 		assertTrue(out.getKeys().get(1) instanceof RSAKey);
 		assertEquals("1", out.getKeys().get(0).getKeyID());
@@ -174,7 +174,7 @@ public class JWKSetBasedJWKSourceTest {
 		assertEquals(1, matches.size());
 
 		JWKSetSource<SecurityContext> provider = jwkSetSource.getJWKSetSource();
-		JWKSet out = provider.getJWKSet(JWKSetCacheEvaluator.never(), System.currentTimeMillis(), new SimpleSecurityContext());
+		JWKSet out = provider.getJWKSet(JWKSetCacheRefreshEvaluator.noRefresh(), System.currentTimeMillis(), new SimpleSecurityContext());
 		assertTrue(out.getKeys().get(0) instanceof RSAKey);
 		assertTrue(out.getKeys().get(1) instanceof RSAKey);
 		assertEquals("1", out.getKeys().get(0).getKeyID());
@@ -258,7 +258,7 @@ public class JWKSetBasedJWKSourceTest {
 		assertEquals(1, matches.size());
 
 		// Check cache
-		JWKSet out = jwkSetSource.getJWKSetSource().getJWKSet(JWKSetCacheEvaluator.never(), System.currentTimeMillis(), new SimpleSecurityContext());
+		JWKSet out = jwkSetSource.getJWKSetSource().getJWKSet(JWKSetCacheRefreshEvaluator.noRefresh(), System.currentTimeMillis(), new SimpleSecurityContext());
 		assertTrue(out.getKeys().get(0) instanceof RSAKey);
 		assertTrue(out.getKeys().get(1) instanceof RSAKey);
 		assertEquals("1", out.getKeys().get(0).getKeyID());
@@ -542,9 +542,9 @@ public class JWKSetBasedJWKSourceTest {
 
 		MutableJWKSetSource<SecurityContext> mutableSource = new MutableJWKSetSource<SecurityContext>() {
 			@Override
-			public JWKSet getJWKSet(JWKSetCacheEvaluator cacheEvaluator, long currentTime, SecurityContext context) throws KeySourceException {
+			public JWKSet getJWKSet(JWKSetCacheRefreshEvaluator refreshEvaluator, long currentTime, SecurityContext context) throws KeySourceException {
 				invocationCounter.incrementAndGet();
-				return super.getJWKSet(JWKSetCacheEvaluator.never(), currentTime, context);
+				return super.getJWKSet(JWKSetCacheRefreshEvaluator.noRefresh(), currentTime, context);
 			}
 		};
 		

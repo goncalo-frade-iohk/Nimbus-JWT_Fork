@@ -11,7 +11,7 @@ import com.nimbusds.jose.proc.SecurityContext;
 
 public class MutableJWKSetSource<C extends SecurityContext> implements JWKSetSource<C> {
 
-	private JWKSet jwkSet;
+	private volatile JWKSet jwkSet;
 
 	@Override
 	public void close() throws IOException {

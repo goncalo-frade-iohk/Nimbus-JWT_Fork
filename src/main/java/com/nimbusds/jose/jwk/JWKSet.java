@@ -69,7 +69,7 @@ import com.nimbusds.jose.util.*;
  *
  * @author Vladimir Dzhuvinov
  * @author Vedran Pavic
- * @version 2022-04-07
+ * @version 2022-11-22
  */
 @Immutable
 public class JWKSet implements Serializable {
@@ -350,6 +350,21 @@ public class JWKSet implements Serializable {
 	public String toString() {
 
 		return toString(true);
+	}
+	
+	
+	@Override
+	public boolean equals(Object o) {
+		if (this == o) return true;
+		if (!(o instanceof JWKSet)) return false;
+		JWKSet jwkSet = (JWKSet) o;
+		return getKeys().equals(jwkSet.getKeys()) && customMembers.equals(jwkSet.customMembers);
+	}
+	
+	
+	@Override
+	public int hashCode() {
+		return Objects.hash(getKeys(), customMembers);
 	}
 	
 	

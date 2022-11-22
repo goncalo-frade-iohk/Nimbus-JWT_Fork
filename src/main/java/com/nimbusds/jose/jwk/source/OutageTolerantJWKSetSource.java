@@ -116,14 +116,24 @@ public class OutageTolerantJWKSetSource<C extends SecurityContext> extends Abstr
 			
 		} catch (JWKSetUnavailableException e) {
 			// return the previously cached JWT set
-			// TODO do we want to use the cacheEvaluator here somehow?
 			CachedObject<JWKSet> cache = getCachedJWKSet();
 			if (cache != null && cache.isValid(currentTime)) {
 				long remainingTime = cache.getExpirationTime() - currentTime; // in millis
 				if (eventListener != null) {
 					eventListener.notify(new OutageEvent<>(this, e, remainingTime, context));
 				}
-				return cache.get();
+				JWKSet jwkSet = cache.get();
+				
+				// There may be in-flight calls waiting to refresh the cache in a parent
+				// JWKSetSource. Ensure they do not attempt to do so if they passed
+				// JWKSetCacheEvaluator.referenceComparison(..) or JWKSetCacheEvaluator.noRefresh().
+				JWKSet jwkSetClone = new JWKSet(jwkSet.getKeys());
+				if(! refreshEvaluator.requiresRefresh(jwkSetClone)) {
+					return jwkSetClone;
+				}
+				
+				// If we made it this far, then JWKSetCacheEvaluator.forceRefresh()
+				// was passed. If so, propagate the error.
 			}
 
 			throw e;

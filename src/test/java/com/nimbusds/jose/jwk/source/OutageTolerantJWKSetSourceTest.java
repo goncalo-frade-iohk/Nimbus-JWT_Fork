@@ -24,7 +24,7 @@ import java.util.List;
 
 import static junit.framework.TestCase.assertEquals;
 import static junit.framework.TestCase.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
@@ -99,7 +99,10 @@ public class OutageTolerantJWKSetSourceTest extends AbstractWrappedJWKSetSourceT
 		source = new OutageTolerantJWKSetSource<>(wrappedJWKSetSource, TIME_TO_LIVE, null);
 		when(wrappedJWKSetSource.getJWKSet(eq(JWKSetCacheRefreshEvaluator.noRefresh()), anyLong(), anySecurityContext())).thenReturn(jwkSet).thenThrow(new JWKSetUnavailableException("TEST", null));
 		source.getJWKSet(JWKSetCacheRefreshEvaluator.noRefresh(), System.currentTimeMillis(), context);
-		assertEquals(jwkSet, source.getJWKSet(JWKSetCacheRefreshEvaluator.noRefresh(), System.currentTimeMillis(), context));
+		JWKSet cachedJwkSet = source.getJWKSet(JWKSetCacheRefreshEvaluator.noRefresh(), System.currentTimeMillis(), context);
+		assertEquals(jwkSet, cachedJwkSet);
+		assertNotSame(jwkSet, cachedJwkSet);
+		assertFalse(JWKSetCacheRefreshEvaluator.referenceComparison(jwkSet).requiresRefresh(cachedJwkSet));
 		verify(wrappedJWKSetSource, times(2)).getJWKSet(eq(JWKSetCacheRefreshEvaluator.noRefresh()), anyLong(), anySecurityContext());
 	}
 
@@ -109,11 +112,29 @@ public class OutageTolerantJWKSetSourceTest extends AbstractWrappedJWKSetSourceT
 		when(wrappedJWKSetSource.getJWKSet(eq(JWKSetCacheRefreshEvaluator.noRefresh()), anyLong(), anySecurityContext())).thenReturn(jwkSet).thenThrow(new JWKSetUnavailableException("TEST", null));
 		source.getJWKSet(JWKSetCacheRefreshEvaluator.noRefresh(), System.currentTimeMillis(), context);
 		assertTrue(events.isEmpty());
-		assertEquals(jwkSet, source.getJWKSet(JWKSetCacheRefreshEvaluator.noRefresh(), System.currentTimeMillis(), context));
+		JWKSet cachedJwkSet = source.getJWKSet(JWKSetCacheRefreshEvaluator.noRefresh(), System.currentTimeMillis(), context);
+		assertEquals(jwkSet, cachedJwkSet);
+		assertNotSame(jwkSet, cachedJwkSet);
+		assertFalse(JWKSetCacheRefreshEvaluator.referenceComparison(jwkSet).requiresRefresh(cachedJwkSet));
 		verify(wrappedJWKSetSource, times(2)).getJWKSet(eq(JWKSetCacheRefreshEvaluator.noRefresh()), anyLong(), anySecurityContext());
 		assertEquals(1, events.size());
 		assertEquals("TEST", events.get(0).getException().getMessage());
 		assertTrue(events.get(0).getRemainingTime() > 0L);
+	}
+	
+	@Test
+	
+	public void throwExceptionWhenDelegateSigningKeyUnavailableAndCacheEvaluatorAlways() throws Exception {
+		source = new OutageTolerantJWKSetSource<>(wrappedJWKSetSource, TIME_TO_LIVE, null);
+		when(wrappedJWKSetSource.getJWKSet(eq(JWKSetCacheRefreshEvaluator.noRefresh()), anyLong(), anySecurityContext())).thenReturn(jwkSet).thenThrow(new JWKSetUnavailableException("TEST", null));
+		source.getJWKSet(JWKSetCacheRefreshEvaluator.noRefresh(), System.currentTimeMillis(), context);
+		try {
+			source.getJWKSet(JWKSetCacheRefreshEvaluator.forceRefresh(), System.currentTimeMillis(), context);
+			fail();
+		} catch(Exception e) {
+			verify(wrappedJWKSetSource, times(1)).getJWKSet(eq(JWKSetCacheRefreshEvaluator.noRefresh()), anyLong(), anySecurityContext());
+			verify(wrappedJWKSetSource, times(1)).getJWKSet(eq(JWKSetCacheRefreshEvaluator.forceRefresh()), anyLong(), anySecurityContext());
+		}
 	}
 
 	@Test

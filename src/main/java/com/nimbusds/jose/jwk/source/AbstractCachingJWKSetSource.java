@@ -108,10 +108,6 @@ abstract class AbstractCachingJWKSetSource<C extends SecurityContext> extends JW
 	 * @return Reference to the cached JWK set.
 	 */
 	CachedObject<JWKSet> cacheJWKSet(final JWKSet jwkSet, final long fetchTime) {
-		
-		// Set a new timestamp, so that threads which did a
-		// read-then-force-refresh can identify that the keys were in
-		// fact updated if multiple threads wanted to force refresh at the same time
 		long currentTime = currentTimeMillis();
 		CachedObject<JWKSet> cachedJWKSet = new CachedObject<>(jwkSet, currentTime, CachedObject.computeExpirationTime(fetchTime, getTimeToLive()));
 		setCachedJWKSet(cachedJWKSet);

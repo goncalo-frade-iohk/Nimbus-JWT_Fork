@@ -28,7 +28,6 @@ import com.nimbusds.jose.jwk.JWK;
 import com.nimbusds.jose.jwk.JWKMatcher;
 import com.nimbusds.jose.jwk.JWKSelector;
 import com.nimbusds.jose.jwk.JWKSet;
-import com.nimbusds.jose.jwk.source.JWKSetCacheRefreshEvaluator.NoRefresh;
 import com.nimbusds.jose.proc.SecurityContext;
 import com.nimbusds.jose.proc.SimpleSecurityContext;
 
@@ -73,8 +72,8 @@ public abstract class AbstractWrappedJWKSetSourceTest {
 	}
 	
 
-	protected static NoRefresh anyNeverJWKSetCacheEvaluator() {
-		return any(NoRefresh.class);
+	protected static NoRefreshJWKSetCacheEvaluator anyNeverJWKSetCacheEvaluator() {
+		return any(NoRefreshJWKSetCacheEvaluator.class);
 	}
 
 }

@@ -18,6 +18,7 @@
 package com.nimbusds.jose.jwk.source;
 
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.util.List;
 import java.util.Objects;
@@ -39,7 +40,7 @@ import com.nimbusds.jose.proc.SecurityContext;
  * @version 2022-11-22
  */
 @ThreadSafe
-public class JWKSetBasedJWKSource<C extends SecurityContext> implements JWKSetSource<C>, JWKSource<C> {
+public class JWKSetBasedJWKSource<C extends SecurityContext> implements JWKSource<C>, Closeable {
 
 	
 	private final JWKSetSource<C> source;
@@ -81,13 +82,6 @@ public class JWKSetBasedJWKSource<C extends SecurityContext> implements JWKSetSo
 		}
 		return select;
 	}
-	
-	
-	@Override
-	public JWKSet getJWKSet(final JWKSetCacheRefreshEvaluator refreshEvaluator, final long currentTime, final C context) throws KeySourceException {
-		return source.getJWKSet(refreshEvaluator, currentTime, context);
-	}
-	
 	
 	/**
 	 * Returns the underlying JWK set source.

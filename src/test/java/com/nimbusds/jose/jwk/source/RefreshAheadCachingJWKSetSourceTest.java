@@ -28,7 +28,6 @@ import java.util.concurrent.TimeUnit;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 import org.junit.Test;
@@ -416,9 +415,10 @@ public class RefreshAheadCachingJWKSetSourceTest extends AbstractWrappedJWKSetSo
 		long justBeforeExpiry = CachedObject.computeExpirationTime(System.currentTimeMillis(), source.getTimeToLive()) - TimeUnit.SECONDS.toMillis(5);
 		verify(wrappedJWKSetSource, only()).getJWKSet(anyJWKSetCacheEvaluator(), anyLong(), anySecurityContext());
 
-		JWKSet justBeforeExpiryKeys = source.getJWKSet(JWKSetCacheRefreshEvaluator.noRefresh(), justBeforeExpiry, context);
+		// trigger a refresh ahead of expiration (by getting the keys)
+		JWKSet justBeforeExpiryKeys = source.getJWKSet(JWKSetCacheRefreshEvaluator.noRefresh(), justBeforeExpiry, context); 
 		assertFalse(justBeforeExpiryKeys.isEmpty());
-		assertEquals(first.getKeys(), justBeforeExpiryKeys.getKeys()); // triggers a refresh ahead of expiration
+		assertEquals(first.getKeys(), justBeforeExpiryKeys.getKeys()); 
 
 		source.getExecutorService().awaitTermination(1, TimeUnit.SECONDS);
 		verify(wrappedJWKSetSource, times(2)).getJWKSet(anyJWKSetCacheEvaluator(), anyLong(), anySecurityContext());
@@ -457,9 +457,10 @@ public class RefreshAheadCachingJWKSetSourceTest extends AbstractWrappedJWKSetSo
 		long justBeforeExpiry = CachedObject.computeExpirationTime(System.currentTimeMillis(), source.getTimeToLive()) - TimeUnit.SECONDS.toMillis(5);
 		verify(wrappedJWKSetSource, only()).getJWKSet(anyJWKSetCacheEvaluator(), anyLong(), anySecurityContext());
 
+		// trigger a refresh ahead of expiration (by getting the keys)
 		JWKSet justBeforeExpiryKeys = source.getJWKSet(JWKSetCacheRefreshEvaluator.noRefresh(), justBeforeExpiry, context);
 		assertFalse(justBeforeExpiryKeys.isEmpty());
-		assertEquals(first.getKeys(), justBeforeExpiryKeys.getKeys()); // triggers a refresh ahead of expiration
+		assertEquals(first.getKeys(), justBeforeExpiryKeys.getKeys()); 
 
 		source.getExecutorService().awaitTermination(1, TimeUnit.SECONDS);
 		verify(wrappedJWKSetSource, times(2)).getJWKSet(anyJWKSetCacheEvaluator(), anyLong(), anySecurityContext());
@@ -710,10 +711,10 @@ public class RefreshAheadCachingJWKSetSourceTest extends AbstractWrappedJWKSetSo
 	@Test
 	public void scheduleRefreshAhead() throws Exception {
 		long timeToLive = 1000; 
-		long refreshTimeout = 150;
-		long preemptiveRefresh = 300;
+		long cacheRefreshTimeout = 150;
+		long refreshAheadTime = 300;
 
-		RefreshAheadCachingJWKSetSource<SecurityContext> source = new RefreshAheadCachingJWKSetSource<>(wrappedJWKSetSource, timeToLive, refreshTimeout, preemptiveRefresh, true, null);
+		RefreshAheadCachingJWKSetSource<SecurityContext> source = new RefreshAheadCachingJWKSetSource<>(wrappedJWKSetSource, timeToLive, cacheRefreshTimeout, refreshAheadTime, true, null);
 		
 		try (JWKSetBasedJWKSource<SecurityContext> wrapper = new JWKSetBasedJWKSource<>(source)) {
 			JWK a = mock(JWK.class);
@@ -739,8 +740,8 @@ public class RefreshAheadCachingJWKSetSourceTest extends AbstractWrappedJWKSetSo
 			
 			long skew = System.currentTimeMillis() - time;
 			
-			assertTrue(left <= timeToLive - refreshTimeout - preemptiveRefresh);
-			assertTrue(left >= timeToLive - refreshTimeout - preemptiveRefresh - skew - 1);
+			assertTrue(left <= timeToLive - cacheRefreshTimeout - refreshAheadTime);
+			assertTrue(left >= timeToLive - cacheRefreshTimeout - refreshAheadTime - skew - 1);
 			
 			// sleep and check that keys were actually updated
 			Thread.sleep(left + Math.min(25, 4 * skew));

@@ -245,6 +245,7 @@ public class CachingJWKSetSource<C extends SecurityContext> extends AbstractCach
 						
 						cache = result;
 					} else {
+						// load updated value
 						cache = cachedJWKSet;
 					}
 					

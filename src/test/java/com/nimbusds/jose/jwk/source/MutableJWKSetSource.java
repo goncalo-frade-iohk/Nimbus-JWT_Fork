@@ -8,6 +8,9 @@ import com.nimbusds.jose.KeySourceException;
 import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.proc.SecurityContext;
 
+/**
+ * Test helper. 
+ */
 
 public class MutableJWKSetSource<C extends SecurityContext> implements JWKSetSource<C> {
 

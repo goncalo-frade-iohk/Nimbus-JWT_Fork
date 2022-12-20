@@ -23,6 +23,8 @@ import java.util.List;
 
 import static junit.framework.TestCase.assertEquals;
 import static junit.framework.TestCase.assertTrue;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
@@ -81,6 +83,9 @@ public class RetryingJWKSetSourceTest extends AbstractWrappedJWKSetSourceTest {
 		assertEquals(jwkSet, source.getJWKSet(JWKSetCacheRefreshEvaluator.noRefresh(), System.currentTimeMillis(), context));
 		verify(wrappedJWKSetSource, times(2)).getJWKSet(eq(JWKSetCacheRefreshEvaluator.noRefresh()), anyLong(), anySecurityContext());
 		assertEquals(1, events.size());
+		
+		RetryingJWKSetSource.RetrialEvent<SecurityContext> event = events.get(0);
+		assertNotNull(event.getException());
 	}
 
 	@Test

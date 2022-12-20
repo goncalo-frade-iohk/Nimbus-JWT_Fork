@@ -123,18 +123,33 @@ public class OutageTolerantJWKSetSourceTest extends AbstractWrappedJWKSetSourceT
 	}
 	
 	@Test
-	
 	public void throwExceptionWhenDelegateSigningKeyUnavailableAndCacheEvaluatorAlways() throws Exception {
 		source = new OutageTolerantJWKSetSource<>(wrappedJWKSetSource, TIME_TO_LIVE, null);
-		when(wrappedJWKSetSource.getJWKSet(eq(JWKSetCacheRefreshEvaluator.noRefresh()), anyLong(), anySecurityContext())).thenReturn(jwkSet).thenThrow(new JWKSetUnavailableException("TEST", null));
+		when(wrappedJWKSetSource.getJWKSet(any(JWKSetCacheRefreshEvaluator.class), anyLong(), anySecurityContext())).thenReturn(jwkSet).thenThrow(new JWKSetUnavailableException("TEST", null));
 		source.getJWKSet(JWKSetCacheRefreshEvaluator.noRefresh(), System.currentTimeMillis(), context);
 		try {
 			source.getJWKSet(JWKSetCacheRefreshEvaluator.forceRefresh(), System.currentTimeMillis(), context);
 			fail();
-		} catch(Exception e) {
+		} catch(JWKSetUnavailableException e) {
 			verify(wrappedJWKSetSource, times(1)).getJWKSet(eq(JWKSetCacheRefreshEvaluator.noRefresh()), anyLong(), anySecurityContext());
 			verify(wrappedJWKSetSource, times(1)).getJWKSet(eq(JWKSetCacheRefreshEvaluator.forceRefresh()), anyLong(), anySecurityContext());
 		}
+	}
+
+	@Test
+	public void throwExceptionWhenDelegateSigningKeyUnavailableAndCacheEvaluatorAlways_withListener() throws Exception {
+		source = new OutageTolerantJWKSetSource<>(wrappedJWKSetSource, TIME_TO_LIVE, eventListener);
+		when(wrappedJWKSetSource.getJWKSet(any(JWKSetCacheRefreshEvaluator.class), anyLong(), anySecurityContext())).thenReturn(jwkSet).thenThrow(new JWKSetUnavailableException("TEST", null));
+		source.getJWKSet(JWKSetCacheRefreshEvaluator.noRefresh(), System.currentTimeMillis(), context);
+		try {
+			source.getJWKSet(JWKSetCacheRefreshEvaluator.forceRefresh(), System.currentTimeMillis(), context);
+			fail();
+		} catch(JWKSetUnavailableException e) {
+			verify(wrappedJWKSetSource, times(1)).getJWKSet(eq(JWKSetCacheRefreshEvaluator.noRefresh()), anyLong(), anySecurityContext());
+			verify(wrappedJWKSetSource, times(1)).getJWKSet(eq(JWKSetCacheRefreshEvaluator.forceRefresh()), anyLong(), anySecurityContext());
+		}
+		
+		assertFalse(events.isEmpty());
 	}
 
 	@Test

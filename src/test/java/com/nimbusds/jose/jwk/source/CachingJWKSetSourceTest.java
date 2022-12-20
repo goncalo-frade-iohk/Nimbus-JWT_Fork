@@ -35,6 +35,7 @@ import com.nimbusds.jose.jwk.JWK;
 import com.nimbusds.jose.jwk.JWKMatcher;
 import com.nimbusds.jose.jwk.JWKSelector;
 import com.nimbusds.jose.jwk.JWKSet;
+import com.nimbusds.jose.jwk.source.CachingJWKSetSource.RefreshCompletedEvent;
 import com.nimbusds.jose.proc.SecurityContext;
 import com.nimbusds.jose.util.cache.CachedObject;
 import com.nimbusds.jose.util.events.Event;
@@ -96,6 +97,9 @@ public class CachingJWKSetSourceTest extends AbstractWrappedJWKSetSourceTest {
 		assertEquals(TIME_TO_LIVE, events.get(0).getSource().getTimeToLive());
 		assertEquals(REFRESH_TIMEOUT, events.get(0).getSource().getCacheRefreshTimeout());
 		assertEquals(0, ((CachingJWKSetSource.RefreshInitiatedEvent<SecurityContext>) events.get(0)).getThreadQueueLength());
+
+		CachingJWKSetSource.RefreshCompletedEvent refreshCompletedEvent = (RefreshCompletedEvent) events.get(1);
+		assertNotNull(refreshCompletedEvent.getJWKSet());
 	}
 
 	@Test
@@ -169,6 +173,55 @@ public class CachingJWKSetSourceTest extends AbstractWrappedJWKSetSourceTest {
 		assertTrue(events.get(3) instanceof CachingJWKSetSource.RefreshCompletedEvent);
 		assertEquals(4, events.size());
 	}
+	
+	@Test
+	public void delegateWhenForceRefresh() throws Exception {
+		source = new CachingJWKSetSource<>(wrappedJWKSetSource, TIME_TO_LIVE, REFRESH_TIMEOUT, null);
+
+		JWKSet first = new JWKSet(jwk);
+		JWKSet second = new JWKSet(Arrays.asList(jwk, jwk));
+
+		when(wrappedJWKSetSource.getJWKSet(anyJWKSetCacheEvaluator(), anyLong(), anySecurityContext())).thenReturn(first).thenReturn(second);
+
+		// first
+		source.getJWKSet(JWKSetCacheRefreshEvaluator.noRefresh(), System.currentTimeMillis(), context);
+		assertEquals(first, source.getJWKSet(JWKSetCacheRefreshEvaluator.noRefresh(), System.currentTimeMillis(), context));
+		verify(wrappedJWKSetSource, only()).getJWKSet(anyJWKSetCacheEvaluator(), anyLong(), anySecurityContext());
+
+		// second
+		source.getJWKSet(JWKSetCacheRefreshEvaluator.forceRefresh(), System.currentTimeMillis(), context);
+		assertEquals(second, source.getJWKSet(JWKSetCacheRefreshEvaluator.noRefresh(), System.currentTimeMillis(), context));
+		verify(wrappedJWKSetSource, times(2)).getJWKSet(anyJWKSetCacheEvaluator(), anyLong(), anySecurityContext());
+	}
+
+	@Test
+	public void delegateWhenForceRefresh_withListener() throws Exception {
+		source = new CachingJWKSetSource<>(wrappedJWKSetSource, TIME_TO_LIVE, REFRESH_TIMEOUT, eventListener);
+		JWKSet first = new JWKSet(jwk);
+		JWKSet second = new JWKSet(Arrays.asList(jwk, jwk));
+		when(wrappedJWKSetSource.getJWKSet(anyJWKSetCacheEvaluator(), anyLong(), anySecurityContext())).thenReturn(first).thenReturn(second);
+
+		// first
+		source.getJWKSet(JWKSetCacheRefreshEvaluator.noRefresh(), System.currentTimeMillis(), context);
+		assertEquals(first, source.getJWKSet(JWKSetCacheRefreshEvaluator.noRefresh(), System.currentTimeMillis(), context));
+		verify(wrappedJWKSetSource, only()).getJWKSet(anyJWKSetCacheEvaluator(), anyLong(), anySecurityContext());
+
+		assertTrue(events.get(0) instanceof CachingJWKSetSource.RefreshInitiatedEvent);
+		assertTrue(events.get(1) instanceof CachingJWKSetSource.RefreshCompletedEvent);
+		assertEquals(2, events.size());
+
+		// second
+		source.getJWKSet(JWKSetCacheRefreshEvaluator.forceRefresh(), System.currentTimeMillis(), context);
+		assertEquals(second, source.getJWKSet(JWKSetCacheRefreshEvaluator.noRefresh(), System.currentTimeMillis(), context));
+		verify(wrappedJWKSetSource, times(2)).getJWKSet(anyJWKSetCacheEvaluator(), anyLong(), anySecurityContext());
+
+		assertTrue(events.get(0) instanceof CachingJWKSetSource.RefreshInitiatedEvent);
+		assertTrue(events.get(1) instanceof CachingJWKSetSource.RefreshCompletedEvent);
+		assertTrue(events.get(2) instanceof CachingJWKSetSource.RefreshInitiatedEvent);
+		assertTrue(events.get(3) instanceof CachingJWKSetSource.RefreshCompletedEvent);
+		assertEquals(4, events.size());
+	}
+
 
 	@Test
 	public void doNotReturnExpired() throws Exception {

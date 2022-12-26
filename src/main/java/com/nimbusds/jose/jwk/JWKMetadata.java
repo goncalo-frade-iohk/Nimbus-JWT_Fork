@@ -20,6 +20,7 @@ package com.nimbusds.jose.jwk;
 
 import java.net.URI;
 import java.text.ParseException;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -29,13 +30,14 @@ import com.nimbusds.jose.util.Base64;
 import com.nimbusds.jose.util.Base64URL;
 import com.nimbusds.jose.util.JSONObjectUtils;
 import com.nimbusds.jose.util.X509CertChainUtils;
+import com.nimbusds.jwt.util.DateUtils;
 
 
 /**
  * JSON Web Key (JWK) metadata.
  *
  * @author Vladimir Dzhuvinov
- * @version 2020-06-03
+ * @version 2022-12-26
  */
 final class JWKMetadata {
 
@@ -181,7 +183,7 @@ final class JWKMetadata {
 	 * @param o The JSON object to parse. Must not be {@code null}.
 	 *
 	 * @return The X.509 certificate chain (containing at least one
-	 *         certificate) as a unmodifiable list, {@code null} if not
+	 *         certificate) as an unmodifiable list, {@code null} if not
 	 *         specified.
 	 *
 	 * @throws ParseException If parsing failed.
@@ -197,5 +199,65 @@ final class JWKMetadata {
 		}
 		
 		return null; // Empty chains not allowed
+	}
+	
+	
+	/**
+	 * Parses the optional expiration time.
+	 *
+	 * @param o The JSON object to parse. Must not be {@code null}.
+	 *
+	 * @return The expiration time, {@code null} if not specified.
+	 *
+	 * @throws ParseException If parsing failed.
+	 */
+	static Date parseExpirationTime(final Map<String, Object> o)
+		throws ParseException {
+		
+		if (o.get(JWKParameterNames.EXPIRATION_TIME) == null) {
+			return null;
+		}
+		
+		return DateUtils.fromSecondsSinceEpoch(JSONObjectUtils.getLong(o, JWKParameterNames.EXPIRATION_TIME));
+	}
+	
+	
+	/**
+	 * Parses the optional not-before time.
+	 *
+	 * @param o The JSON object to parse. Must not be {@code null}.
+	 *
+	 * @return The not-before time, {@code null} if not specified.
+	 *
+	 * @throws ParseException If parsing failed.
+	 */
+	static Date parseNotBeforeTime(final Map<String, Object> o)
+		throws ParseException {
+		
+		if (o.get(JWKParameterNames.NOT_BEFORE) == null) {
+			return null;
+		}
+		
+		return DateUtils.fromSecondsSinceEpoch(JSONObjectUtils.getLong(o, JWKParameterNames.NOT_BEFORE));
+	}
+	
+	
+	/**
+	 * Parses the optional issued-at time.
+	 *
+	 * @param o The JSON object to parse. Must not be {@code null}.
+	 *
+	 * @return The issued-at time, {@code null} if not specified.
+	 *
+	 * @throws ParseException If parsing failed.
+	 */
+	static Date parseIssueTime(final Map<String, Object> o)
+		throws ParseException {
+		
+		if (o.get(JWKParameterNames.ISSUED_AT) == null) {
+			return null;
+		}
+		
+		return DateUtils.fromSecondsSinceEpoch(JSONObjectUtils.getLong(o, JWKParameterNames.ISSUED_AT));
 	}
 }

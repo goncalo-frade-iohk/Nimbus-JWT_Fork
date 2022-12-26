@@ -48,13 +48,14 @@ import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.crypto.bc.BouncyCastleProviderSingleton;
 import com.nimbusds.jose.util.Base64;
 import com.nimbusds.jose.util.*;
+import com.nimbusds.jwt.util.DateUtils;
 
 
 /**
  * Tests the EC JWK class.
  *
  * @author Vladimir Dzhuvinov
- * @version 2022-01-24
+ * @version 2022-12-26
  */
 public class ECKeyTest extends TestCase {
 
@@ -116,6 +117,12 @@ public class ECKeyTest extends TestCase {
 		
 		public static final Base64URL Y = new Base64URL("AHgOZhhJb2ZiozkquiEa0Z9SfERJbWaaE7qEnCuk9VVZaWruKWKNzZadoIRPt8h305r14KRoxu8AfV20X-d_2Ups");
 	}
+	
+	
+	private static final Date EXP = DateUtils.fromSecondsSinceEpoch(13_000_000L);
+	private static final Date NBF = DateUtils.fromSecondsSinceEpoch(12_000_000L);
+	private static final Date IAT = DateUtils.fromSecondsSinceEpoch(11_000_000L);
+	
 
 
 	public void testKeySizes() {
@@ -191,7 +198,7 @@ public class ECKeyTest extends TestCase {
 		KeyStore keyStore = KeyStore.getInstance(KeyStore.getDefaultType());
 
 		ECKey key = new ECKey(ExampleKeyP256.CRV, ExampleKeyP256.X, ExampleKeyP256.Y, ExampleKeyP256.D,
-			KeyUse.SIGNATURE, ops, JWSAlgorithm.ES256, "1", x5u, x5t, x5t256, x5c, keyStore);
+			KeyUse.SIGNATURE, ops, JWSAlgorithm.ES256, "1", x5u, x5t, x5t256, x5c, EXP, NBF, IAT, keyStore);
 
 		assertTrue(key instanceof AsymmetricJWK);
 		assertTrue(key instanceof CurveBasedJWK);
@@ -206,6 +213,9 @@ public class ECKeyTest extends TestCase {
 		assertEquals(x5t256.toString(), key.getX509CertSHA256Thumbprint().toString());
 		assertNull(key.getX509CertChain());
 		assertNull(key.getParsedX509CertChain());
+		assertEquals(EXP, key.getExpirationTime());
+		assertEquals(NBF, key.getNotBeforeTime());
+		assertEquals(IAT, key.getIssueTime());
 		assertEquals(keyStore, key.getKeyStore());
 
 		assertEquals(Curve.P_256, key.getCurve());
@@ -225,6 +235,9 @@ public class ECKeyTest extends TestCase {
 		assertNull(key.getKeyOperations());
 		assertEquals(JWSAlgorithm.ES256, key.getAlgorithm());
 		assertEquals("1", key.getKeyID());
+		assertEquals(EXP, key.getExpirationTime());
+		assertEquals(NBF, key.getNotBeforeTime());
+		assertEquals(IAT, key.getIssueTime());
 		assertNull(key.getKeyStore());
 
 		assertEquals(Curve.P_256, key.getCurve());
@@ -248,6 +261,9 @@ public class ECKeyTest extends TestCase {
 		assertEquals(x5t256.toString(), key.getX509CertSHA256Thumbprint().toString());
 		assertNull(key.getX509CertChain());
 		assertNull(key.getParsedX509CertChain());
+		assertEquals(EXP, key.getExpirationTime());
+		assertEquals(NBF, key.getNotBeforeTime());
+		assertEquals(IAT, key.getIssueTime());
 		assertNull(key.getKeyStore());
 
 		assertEquals(Curve.P_256, key.getCurve());
@@ -271,7 +287,7 @@ public class ECKeyTest extends TestCase {
 		Set<KeyOperation> ops = new LinkedHashSet<>(Arrays.asList(KeyOperation.SIGN, KeyOperation.VERIFY));
 
 		ECKey key = new ECKey(ExampleKeyP256.CRV, ExampleKeyP256.X, ExampleKeyP256.Y, ExampleKeyP256.D,
-			use, ops, JWSAlgorithm.ES256, "1", x5u, x5t, x5t256, x5c, null);
+			use, ops, JWSAlgorithm.ES256, "1", x5u, x5t, x5t256, x5c, EXP, NBF, IAT, null);
 
 		// Test getters
 		assertNull(key.getKeyUse());
@@ -285,6 +301,9 @@ public class ECKeyTest extends TestCase {
 		assertEquals(x5t256.toString(), key.getX509CertSHA256Thumbprint().toString());
 		assertNull(key.getX509CertChain());
 		assertNull(key.getParsedX509CertChain());
+		assertEquals(EXP, key.getExpirationTime());
+		assertEquals(NBF, key.getNotBeforeTime());
+		assertEquals(IAT, key.getIssueTime());
 		assertNull(key.getKeyStore());
 
 		assertEquals(Curve.P_256, key.getCurve());
@@ -306,6 +325,9 @@ public class ECKeyTest extends TestCase {
 		assertEquals(2, key.getKeyOperations().size());
 		assertEquals(JWSAlgorithm.ES256, key.getAlgorithm());
 		assertEquals("1", key.getKeyID());
+		assertEquals(EXP, key.getExpirationTime());
+		assertEquals(NBF, key.getNotBeforeTime());
+		assertEquals(IAT, key.getIssueTime());
 		assertNull(key.getKeyStore());
 
 		assertEquals(Curve.P_256, key.getCurve());
@@ -331,6 +353,9 @@ public class ECKeyTest extends TestCase {
 		assertEquals(x5t256.toString(), key.getX509CertSHA256Thumbprint().toString());
 		assertNull(key.getX509CertChain());
 		assertNull(key.getParsedX509CertChain());
+		assertEquals(EXP, key.getExpirationTime());
+		assertEquals(NBF, key.getNotBeforeTime());
+		assertEquals(IAT, key.getIssueTime());
 		assertNull(key.getKeyStore());
 
 		assertEquals(Curve.P_256, key.getCurve());
@@ -359,6 +384,9 @@ public class ECKeyTest extends TestCase {
 			.x509CertURL(x5u)
 			.x509CertThumbprint(x5t)
 			.x509CertChain(x5c)
+			.expirationTime(EXP)
+			.notBeforeTime(NBF)
+			.issueTime(IAT)
 			.keyStore(keyStore)
 			.build();
 
@@ -370,6 +398,9 @@ public class ECKeyTest extends TestCase {
 		assertEquals(x5t.toString(), key.getX509CertThumbprint().toString());
 		assertNull(key.getX509CertChain());
 		assertNull(key.getParsedX509CertChain());
+		assertEquals(EXP, key.getExpirationTime());
+		assertEquals(NBF, key.getNotBeforeTime());
+		assertEquals(IAT, key.getIssueTime());
 		assertEquals(keyStore, key.getKeyStore());
 
 		assertEquals(Curve.P_256, key.getCurve());
@@ -388,6 +419,9 @@ public class ECKeyTest extends TestCase {
 		assertEquals(KeyUse.SIGNATURE, key.getKeyUse());
 		assertEquals(JWSAlgorithm.ES256, key.getAlgorithm());
 		assertEquals("1", key.getKeyID());
+		assertEquals(EXP, key.getExpirationTime());
+		assertEquals(NBF, key.getNotBeforeTime());
+		assertEquals(IAT, key.getIssueTime());
 		assertNull(key.getKeyStore());
 
 		assertEquals(Curve.P_256, key.getCurve());
@@ -409,6 +443,9 @@ public class ECKeyTest extends TestCase {
 		assertEquals(x5t.toString(), key.getX509CertThumbprint().toString());
 		assertNull(key.getX509CertChain());
 		assertNull(key.getParsedX509CertChain());
+		assertEquals(EXP, key.getExpirationTime());
+		assertEquals(NBF, key.getNotBeforeTime());
+		assertEquals(IAT, key.getIssueTime());
 		assertNull(key.getKeyStore());
 
 		assertEquals(Curve.P_256, key.getCurve());
@@ -437,6 +474,9 @@ public class ECKeyTest extends TestCase {
 			.x509CertURL(x5u)
 			.x509CertThumbprint(x5t)
 			.x509CertChain(x5c)
+			.expirationTime(EXP)
+			.notBeforeTime(NBF)
+			.issueTime(IAT)
 			.keyStore(keyStore)
 			.build();
 		
@@ -451,6 +491,9 @@ public class ECKeyTest extends TestCase {
 		assertEquals(x5t.toString(), key.getX509CertThumbprint().toString());
 		assertNull(key.getX509CertChain());
 		assertNull(key.getParsedX509CertChain());
+		assertEquals(EXP, key.getExpirationTime());
+		assertEquals(NBF, key.getNotBeforeTime());
+		assertEquals(IAT, key.getIssueTime());
 		assertEquals(keyStore, key.getKeyStore());
 
 		assertEquals(Curve.P_256, key.getCurve());
@@ -880,6 +923,9 @@ public class ECKeyTest extends TestCase {
 		assertEquals(Base64URL.encode(sha256.digest(cert.getEncoded())), ecKey.getX509CertSHA256Thumbprint());
 		assertNull(ecKey.getAlgorithm());
 		assertNull(ecKey.getKeyOperations());
+		assertEquals(1511337599L, DateUtils.toSecondsSinceEpoch(ecKey.getExpirationTime()));
+		assertEquals(1479715200L, DateUtils.toSecondsSinceEpoch(ecKey.getNotBeforeTime()));
+		assertNull(ecKey.getIssueTime());
 	}
 	
 	
@@ -946,6 +992,9 @@ public class ECKeyTest extends TestCase {
 		assertEquals(1, ecKey.getX509CertChain().size());
 		assertNull(ecKey.getX509CertThumbprint());
 		assertNotNull(ecKey.getX509CertSHA256Thumbprint());
+		assertEquals(DateUtils.toSecondsSinceEpoch(exp), DateUtils.toSecondsSinceEpoch(ecKey.getExpirationTime()));
+		assertEquals(DateUtils.toSecondsSinceEpoch(nbf), DateUtils.toSecondsSinceEpoch(ecKey.getNotBeforeTime()));
+		assertNull(ecKey.getIssueTime());
 		assertTrue(ecKey.isPrivate());
 		assertEquals(keyStore, ecKey.getKeyStore());
 		

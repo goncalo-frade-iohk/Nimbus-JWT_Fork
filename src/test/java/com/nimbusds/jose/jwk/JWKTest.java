@@ -55,13 +55,14 @@ import com.nimbusds.jose.util.IOUtils;
 import com.nimbusds.jose.util.X509CertUtils;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
+import com.nimbusds.jwt.util.DateUtils;
 
 
 /**
  * Tests the base JWK class.
  *
  * @author Vladimir Dzhuvinov
- * @version 2022-02-07
+ * @version 2022-12-26
  */
 public class JWKTest extends TestCase {
 	
@@ -81,6 +82,9 @@ public class JWKTest extends TestCase {
 		assertEquals(1, jwk.getX509CertChain().size());
 		assertNull(jwk.getX509CertThumbprint());
 		assertNotNull(jwk.getX509CertSHA256Thumbprint());
+		assertNotNull(jwk.getExpirationTime());
+		assertNotNull(jwk.getNotBeforeTime());
+		assertNull(jwk.getIssueTime());
 		assertFalse(jwk.isPrivate());
 		
 		if (KeyType.RSA.equals(expectedKeyType)) {
@@ -180,6 +184,8 @@ public class JWKTest extends TestCase {
 		assertEquals(1, rsaKey.getX509CertChain().size());
 		assertNull(rsaKey.getX509CertThumbprint());
 		assertNotNull(rsaKey.getX509CertSHA256Thumbprint());
+		assertEquals(DateUtils.toSecondsSinceEpoch(exp), DateUtils.toSecondsSinceEpoch(rsaKey.getExpirationTime()));
+		assertEquals(DateUtils.toSecondsSinceEpoch(nbf), DateUtils.toSecondsSinceEpoch(rsaKey.getNotBeforeTime()));
 		assertTrue(rsaKey.isPrivate());
 		
 		// Try to load with bad pin
@@ -241,6 +247,8 @@ public class JWKTest extends TestCase {
 		assertEquals(1, ecKey.getX509CertChain().size());
 		assertNull(ecKey.getX509CertThumbprint());
 		assertNotNull(ecKey.getX509CertSHA256Thumbprint());
+		assertEquals(DateUtils.toSecondsSinceEpoch(exp), DateUtils.toSecondsSinceEpoch(ecKey.getExpirationTime()));
+		assertEquals(DateUtils.toSecondsSinceEpoch(nbf), DateUtils.toSecondsSinceEpoch(ecKey.getNotBeforeTime()));
 		assertTrue(ecKey.isPrivate());
 		
 		// Try to load with bad pin
@@ -358,7 +366,7 @@ public class JWKTest extends TestCase {
 		assertTrue(ecKey.isPrivate());
 	}
 
-	public void testPemRoundtripSignVerify() throws JOSEException, ParseException {
+	public void testPemRoundTripSignVerify() throws JOSEException, ParseException {
 		RSAKey signingKey = (RSAKey) JWK.parseFromPEMEncodedObjects(SamplePEMEncodedObjects.RSA_PRIVATE_KEY_PEM);
 		RSAKey validationKey = (RSAKey) JWK.parseFromPEMEncodedObjects(SamplePEMEncodedObjects.RSA_PUBLIC_KEY_PEM);
 
@@ -387,7 +395,7 @@ public class JWKTest extends TestCase {
 		assertTrue(signedJWT.verify(verifier));
 	}
 
-	public void testPemRoundtripSignVerifyMismatch()
+	public void testPemRoundTripSignVerifyMismatch()
 			throws JOSEException, ParseException, NoSuchAlgorithmException {
 
 		KeyPairGenerator keyGenerator = KeyPairGenerator.getInstance("RSA");

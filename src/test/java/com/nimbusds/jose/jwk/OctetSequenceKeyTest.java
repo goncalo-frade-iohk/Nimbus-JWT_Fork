@@ -40,15 +40,21 @@ import com.nimbusds.jose.util.Base64;
 import com.nimbusds.jose.util.Base64URL;
 import com.nimbusds.jose.util.JSONObjectUtils;
 import com.nimbusds.jose.util.StandardCharset;
+import com.nimbusds.jwt.util.DateUtils;
 
 
 /**
  * Tests the Octet Sequence JWK class.
  *
  * @author Vladimir Dzhuvinov
- * @version 2022-01-24
+ * @version 2022-12-26
  */
 public class OctetSequenceKeyTest extends TestCase {
+	
+	
+	private static final Date EXP = DateUtils.fromSecondsSinceEpoch(13_000_000L);
+	private static final Date NBF = DateUtils.fromSecondsSinceEpoch(12_000_000L);
+	private static final Date IAT = DateUtils.fromSecondsSinceEpoch(11_000_000L);
 
 
 	public void testConstructorAndSerialization()
@@ -64,7 +70,7 @@ public class OctetSequenceKeyTest extends TestCase {
 		
 		KeyStore keyStore = KeyStore.getInstance(KeyStore.getDefaultType());
 
-		OctetSequenceKey key = new OctetSequenceKey(k, null, ops, JWSAlgorithm.HS256, "1", x5u, x5t, x5t256, x5c, keyStore);
+		OctetSequenceKey key = new OctetSequenceKey(k, null, ops, JWSAlgorithm.HS256, "1", x5u, x5t, x5t256, x5c, EXP, NBF, IAT, keyStore);
 
 		assertTrue(key instanceof SecretJWK);
 
@@ -79,6 +85,9 @@ public class OctetSequenceKeyTest extends TestCase {
 		assertEquals(x5t.toString(), key.getX509CertThumbprint().toString());
 		assertEquals(x5t256.toString(), key.getX509CertSHA256Thumbprint().toString());
 		assertEquals(x5c.size(), key.getX509CertChain().size());
+		assertEquals(EXP, key.getExpirationTime());
+		assertEquals(NBF, key.getNotBeforeTime());
+		assertEquals(IAT, key.getIssueTime());
 		assertEquals(keyStore, key.getKeyStore());
 
 		assertEquals(k, key.getKeyValue());
@@ -108,6 +117,90 @@ public class OctetSequenceKeyTest extends TestCase {
 		assertEquals(x5t.toString(), key.getX509CertThumbprint().toString());
 		assertEquals(x5t256.toString(), key.getX509CertSHA256Thumbprint().toString());
 		assertEquals(x5c.size(), key.getX509CertChain().size());
+		assertEquals(EXP, key.getExpirationTime());
+		assertEquals(NBF, key.getNotBeforeTime());
+		assertEquals(IAT, key.getIssueTime());
+		assertNull(key.getKeyStore());
+
+		assertEquals(k, key.getKeyValue());
+
+		keyBytes = k.decode();
+
+		for (int i=0; i < keyBytes.length; i++) {
+
+			assertEquals(keyBytes[i], key.toByteArray()[i]);
+
+		}
+
+		assertNull(key.toPublicJWK());
+
+		assertTrue(key.isPrivate());
+	}
+
+
+	public void testConstructorAndSerialization_deprecated()
+		throws Exception {
+
+		Base64URL k = new Base64URL("GawgguFyGrWKav7AX4VKUg");
+		URI x5u = new URI("http://example.com/jwk.json");
+		Base64URL x5t = new Base64URL("abc");
+		Base64URL x5t256 = new Base64URL("abc256");
+		List<Base64> x5c = SampleCertificates.SAMPLE_X5C_RSA;
+
+		Set<KeyOperation> ops = new LinkedHashSet<>(Arrays.asList(KeyOperation.SIGN, KeyOperation.VERIFY));
+		
+		KeyStore keyStore = KeyStore.getInstance(KeyStore.getDefaultType());
+
+		OctetSequenceKey key = new OctetSequenceKey(k, null, ops, JWSAlgorithm.HS256, "1", x5u, x5t, x5t256, x5c, keyStore);
+
+		assertTrue(key instanceof SecretJWK);
+
+		assertEquals(KeyType.OCT, key.getKeyType());
+		assertNull(key.getKeyUse());
+		assertTrue(key.getKeyOperations().contains(KeyOperation.SIGN));
+		assertTrue(key.getKeyOperations().contains(KeyOperation.VERIFY));
+		assertEquals(2, key.getKeyOperations().size());
+		assertEquals(JWSAlgorithm.HS256, key.getAlgorithm());
+		assertEquals("1", key.getKeyID());
+		assertEquals(x5u.toString(), key.getX509CertURL().toString());
+		assertEquals(x5t.toString(), key.getX509CertThumbprint().toString());
+		assertEquals(x5t256.toString(), key.getX509CertSHA256Thumbprint().toString());
+		assertEquals(x5c.size(), key.getX509CertChain().size());
+		assertNull(key.getExpirationTime());
+		assertNull(key.getNotBeforeTime());
+		assertNull(key.getIssueTime());
+		assertEquals(keyStore, key.getKeyStore());
+
+		assertEquals(k, key.getKeyValue());
+
+		byte[] keyBytes = k.decode();
+
+		for (int i=0; i < keyBytes.length; i++) {
+			assertEquals(keyBytes[i], key.toByteArray()[i]);
+		}
+
+		assertNull(key.toPublicJWK());
+
+		assertTrue(key.isPrivate());
+
+		String jwkString = JSONObjectUtils.toJSONString( key.toJSONObject());
+
+		key = OctetSequenceKey.parse(jwkString);
+
+		assertEquals(KeyType.OCT, key.getKeyType());
+		assertNull(key.getKeyUse());
+		assertTrue(key.getKeyOperations().contains(KeyOperation.SIGN));
+		assertTrue(key.getKeyOperations().contains(KeyOperation.VERIFY));
+		assertEquals(2, key.getKeyOperations().size());
+		assertEquals(JWSAlgorithm.HS256, key.getAlgorithm());
+		assertEquals("1", key.getKeyID());
+		assertEquals(x5u.toString(), key.getX509CertURL().toString());
+		assertEquals(x5t.toString(), key.getX509CertThumbprint().toString());
+		assertEquals(x5t256.toString(), key.getX509CertSHA256Thumbprint().toString());
+		assertEquals(x5c.size(), key.getX509CertChain().size());
+		assertNull(key.getExpirationTime());
+		assertNull(key.getNotBeforeTime());
+		assertNull(key.getIssueTime());
 		assertNull(key.getKeyStore());
 
 		assertEquals(k, key.getKeyValue());
@@ -135,7 +228,7 @@ public class OctetSequenceKeyTest extends TestCase {
 		Base64URL x5t256 = new Base64URL("abc256");
 		List<Base64> x5c = SampleCertificates.SAMPLE_X5C_RSA;
 
-		OctetSequenceKey key = new OctetSequenceKey(k, KeyUse.SIGNATURE, null, JWSAlgorithm.HS256, "1", x5u, x5t, x5t256, x5c, null);
+		OctetSequenceKey key = new OctetSequenceKey(k, KeyUse.SIGNATURE, null, JWSAlgorithm.HS256, "1", x5u, x5t, x5t256, x5c,  EXP, NBF, IAT,null);
 
 		assertEquals(KeyType.OCT, key.getKeyType());
 		assertEquals(KeyUse.SIGNATURE, key.getKeyUse());
@@ -146,6 +239,9 @@ public class OctetSequenceKeyTest extends TestCase {
 		assertEquals(x5t.toString(), key.getX509CertThumbprint().toString());
 		assertEquals(x5t256.toString(), key.getX509CertSHA256Thumbprint().toString());
 		assertEquals(x5c.size(), key.getX509CertChain().size());
+		assertEquals(EXP, key.getExpirationTime());
+		assertEquals(NBF, key.getNotBeforeTime());
+		assertEquals(IAT, key.getIssueTime());
 		assertNull(key.getKeyStore());
 
 		assertEquals(k, key.getKeyValue());
@@ -173,6 +269,79 @@ public class OctetSequenceKeyTest extends TestCase {
 		assertEquals(x5t.toString(), key.getX509CertThumbprint().toString());
 		assertEquals(x5t256.toString(), key.getX509CertSHA256Thumbprint().toString());
 		assertEquals(x5c.size(), key.getX509CertChain().size());
+		assertEquals(EXP, key.getExpirationTime());
+		assertEquals(NBF, key.getNotBeforeTime());
+		assertEquals(IAT, key.getIssueTime());
+
+		assertEquals(k, key.getKeyValue());
+
+		keyBytes = k.decode();
+
+		for (int i=0; i < keyBytes.length; i++) {
+
+			assertEquals(keyBytes[i], key.toByteArray()[i]);
+
+		}
+
+		assertNull(key.toPublicJWK());
+
+		assertTrue(key.isPrivate());
+	}
+
+
+	public void testAltConstructorAndSerialization_deprecated()
+		throws Exception {
+
+		Base64URL k = new Base64URL("GawgguFyGrWKav7AX4VKUg");
+		URI x5u = new URI("http://example.com/jwk.json");
+		Base64URL x5t = new Base64URL("abc");
+		Base64URL x5t256 = new Base64URL("abc256");
+		List<Base64> x5c = SampleCertificates.SAMPLE_X5C_RSA;
+
+		OctetSequenceKey key = new OctetSequenceKey(k, KeyUse.SIGNATURE, null, JWSAlgorithm.HS256, "1", x5u, x5t, x5t256, x5c, null);
+
+		assertEquals(KeyType.OCT, key.getKeyType());
+		assertEquals(KeyUse.SIGNATURE, key.getKeyUse());
+		assertNull(key.getKeyOperations());
+		assertEquals(JWSAlgorithm.HS256, key.getAlgorithm());
+		assertEquals("1", key.getKeyID());
+		assertEquals(x5u.toString(), key.getX509CertURL().toString());
+		assertEquals(x5t.toString(), key.getX509CertThumbprint().toString());
+		assertEquals(x5t256.toString(), key.getX509CertSHA256Thumbprint().toString());
+		assertEquals(x5c.size(), key.getX509CertChain().size());
+		assertNull(key.getExpirationTime());
+		assertNull(key.getNotBeforeTime());
+		assertNull(key.getIssueTime());
+		assertNull(key.getKeyStore());
+
+		assertEquals(k, key.getKeyValue());
+
+		byte[] keyBytes = k.decode();
+
+		for (int i=0; i < keyBytes.length; i++) {
+			assertEquals(keyBytes[i], key.toByteArray()[i]);
+		}
+
+		assertNull(key.toPublicJWK());
+
+		assertTrue(key.isPrivate());
+
+		String jwkString = JSONObjectUtils.toJSONString( key.toJSONObject());
+
+		key = OctetSequenceKey.parse(jwkString);
+
+		assertEquals(KeyType.OCT, key.getKeyType());
+		assertEquals(KeyUse.SIGNATURE, key.getKeyUse());
+		assertNull(key.getKeyOperations());
+		assertEquals(JWSAlgorithm.HS256, key.getAlgorithm());
+		assertEquals("1", key.getKeyID());
+		assertEquals(x5u.toString(), key.getX509CertURL().toString());
+		assertEquals(x5t.toString(), key.getX509CertThumbprint().toString());
+		assertEquals(x5t256.toString(), key.getX509CertSHA256Thumbprint().toString());
+		assertEquals(x5c.size(), key.getX509CertChain().size());
+		assertNull(key.getExpirationTime());
+		assertNull(key.getNotBeforeTime());
+		assertNull(key.getIssueTime());
 
 		assertEquals(k, key.getKeyValue());
 
@@ -235,6 +404,9 @@ public class OctetSequenceKeyTest extends TestCase {
 			.x509CertURL(x5u)
 			.x509CertThumbprint(x5t)
 			.x509CertChain(x5c)
+			.expirationTime(EXP)
+			.notBeforeTime(NBF)
+			.issueTime(IAT)
 			.keyStore(keyStore)
 			.build();
 
@@ -248,6 +420,9 @@ public class OctetSequenceKeyTest extends TestCase {
 		assertEquals(x5u.toString(), key.getX509CertURL().toString());
 		assertEquals(x5t.toString(), key.getX509CertThumbprint().toString());
 		assertEquals(x5c.size(), key.getX509CertChain().size());
+		assertEquals(EXP, key.getExpirationTime());
+		assertEquals(NBF, key.getNotBeforeTime());
+		assertEquals(IAT, key.getIssueTime());
 		assertEquals(keyStore, key.getKeyStore());
 
 		assertEquals(k, key.getKeyValue());
@@ -278,6 +453,9 @@ public class OctetSequenceKeyTest extends TestCase {
 		assertEquals(x5u.toString(), key.getX509CertURL().toString());
 		assertEquals(x5t.toString(), key.getX509CertThumbprint().toString());
 		assertEquals(x5c.size(), key.getX509CertChain().size());
+		assertEquals(EXP, key.getExpirationTime());
+		assertEquals(NBF, key.getNotBeforeTime());
+		assertEquals(IAT, key.getIssueTime());
 		assertNull(key.getKeyStore());
 
 		assertEquals(k, key.getKeyValue());
@@ -488,6 +666,9 @@ public class OctetSequenceKeyTest extends TestCase {
 		OctetSequenceKey octJWK = OctetSequenceKey.load(keyStore, "1", "1234".toCharArray());
 		assertNotNull(octJWK);
 		assertEquals("1", octJWK.getKeyID());
+		assertNull(octJWK.getExpirationTime());
+		assertNull(octJWK.getNotBeforeTime());
+		assertNull(octJWK.getIssueTime());
 		assertArrayEquals(secretKey.getEncoded(), octJWK.toByteArray());
 		assertEquals(keyStore, octJWK.getKeyStore());
 	}
@@ -510,6 +691,9 @@ public class OctetSequenceKeyTest extends TestCase {
 		OctetSequenceKey octJWK = OctetSequenceKey.load(keyStore, "1", "".toCharArray());
 		assertNotNull(octJWK);
 		assertEquals("1", octJWK.getKeyID());
+		assertNull(octJWK.getExpirationTime());
+		assertNull(octJWK.getNotBeforeTime());
+		assertNull(octJWK.getIssueTime());
 		assertArrayEquals(secretKey.getEncoded(), octJWK.toByteArray());
 		assertEquals(keyStore, octJWK.getKeyStore());
 	}

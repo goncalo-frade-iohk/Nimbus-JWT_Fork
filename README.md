@@ -54,7 +54,7 @@ The library handles the following JOSE algorithms:
 * JWE Compression with DEFLATE.
 
 
-## Supported IETF standards and drafts
+## Supported standard and draft specifications
 
 * RFC 7515 - JSON Web Signature (JWS)
 * RFC 7516 - JSON Web Encryption (JWE)
@@ -79,6 +79,7 @@ The library handles the following JOSE algorithms:
   Signing and Encryption (JOSE) (note, support for XC20P only)
 * draft-irtf-cfrg-xchacha-03 - XChaCha: eXtended-nonce ChaCha and 
   AEAD_XChaCha20_Poly1305
+* OpenID Connect Federation 1.0 (JWK exp, nbf and iat parameters)
 
 
 ## System requirements and dependencies

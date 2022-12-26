@@ -1487,3 +1487,7 @@ version 9.25.5 (2022-10-11)
 version 9.25.6 (2022-10-13)
     * Addresses incomplete #496 fix to remove module-info.class for the shaded
       com.google.gson package (iss #497).
+
+version 9.26 (2022-12-26)
+    * JWK adds support for exp, nbf and exp parameters as specified in OpenID
+      Connect Federation 1.0

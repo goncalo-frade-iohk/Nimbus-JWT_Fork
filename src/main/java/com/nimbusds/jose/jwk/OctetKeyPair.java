@@ -18,14 +18,6 @@
 package com.nimbusds.jose.jwk;
 
 
-import com.nimbusds.jose.Algorithm;
-import com.nimbusds.jose.JOSEException;
-import com.nimbusds.jose.util.Base64;
-import com.nimbusds.jose.util.Base64URL;
-import com.nimbusds.jose.util.ByteUtils;
-import com.nimbusds.jose.util.JSONObjectUtils;
-import net.jcip.annotations.Immutable;
-
 import java.net.URI;
 import java.security.KeyPair;
 import java.security.KeyStore;
@@ -34,6 +26,15 @@ import java.security.PublicKey;
 import java.security.cert.X509Certificate;
 import java.text.ParseException;
 import java.util.*;
+
+import net.jcip.annotations.Immutable;
+
+import com.nimbusds.jose.Algorithm;
+import com.nimbusds.jose.JOSEException;
+import com.nimbusds.jose.util.Base64;
+import com.nimbusds.jose.util.Base64URL;
+import com.nimbusds.jose.util.ByteUtils;
+import com.nimbusds.jose.util.JSONObjectUtils;
 
 
 /**
@@ -84,7 +85,7 @@ import java.util.*;
  * </pre>
  *
  * @author Vladimir Dzhuvinov
- * @version 2020-06-03
+ * @version 2022-12-26
  */
 @Immutable
 public class OctetKeyPair extends JWK implements AsymmetricJWK, CurveBasedJWK {
@@ -185,6 +186,24 @@ public class OctetKeyPair extends JWK implements AsymmetricJWK, CurveBasedJWK {
 		
 		
 		/**
+		 * The key expiration time, optional.
+		 */
+		private Date exp;
+		
+		
+		/**
+		 * The key not-before time, optional.
+		 */
+		private Date nbf;
+		
+		
+		/**
+		 * The key issued-at time, optional.
+		 */
+		private Date iat;
+		
+		
+		/**
 		 * Reference to the underlying key store, {@code null} if none.
 		 */
 		private KeyStore ks;
@@ -233,6 +252,9 @@ public class OctetKeyPair extends JWK implements AsymmetricJWK, CurveBasedJWK {
 			x5t = okpJWK.getX509CertThumbprint();
 			x5t256 = okpJWK.getX509CertSHA256Thumbprint();
 			x5c = okpJWK.getX509CertChain();
+			exp = okpJWK.getExpirationTime();
+			nbf = okpJWK.getNotBeforeTime();
+			iat = okpJWK.getIssueTime();
 			ks = okpJWK.getKeyStore();
 		}
 		
@@ -245,7 +267,7 @@ public class OctetKeyPair extends JWK implements AsymmetricJWK, CurveBasedJWK {
 		 *
 		 * @return This builder.
 		 */
-		public OctetKeyPair.Builder d(final Base64URL d) {
+		public Builder d(final Base64URL d) {
 			
 			this.d = d;
 			return this;
@@ -261,7 +283,7 @@ public class OctetKeyPair extends JWK implements AsymmetricJWK, CurveBasedJWK {
 		 *
 		 * @return This builder.
 		 */
-		public OctetKeyPair.Builder keyUse(final KeyUse use) {
+		public Builder keyUse(final KeyUse use) {
 			
 			this.use = use;
 			return this;
@@ -276,7 +298,7 @@ public class OctetKeyPair extends JWK implements AsymmetricJWK, CurveBasedJWK {
 		 *
 		 * @return This builder.
 		 */
-		public OctetKeyPair.Builder keyOperations(final Set<KeyOperation> ops) {
+		public Builder keyOperations(final Set<KeyOperation> ops) {
 			
 			this.ops = ops;
 			return this;
@@ -291,7 +313,7 @@ public class OctetKeyPair extends JWK implements AsymmetricJWK, CurveBasedJWK {
 		 *
 		 * @return This builder.
 		 */
-		public OctetKeyPair.Builder algorithm(final Algorithm alg) {
+		public Builder algorithm(final Algorithm alg) {
 			
 			this.alg = alg;
 			return this;
@@ -308,7 +330,7 @@ public class OctetKeyPair extends JWK implements AsymmetricJWK, CurveBasedJWK {
 		 *
 		 * @return This builder.
 		 */
-		public OctetKeyPair.Builder keyID(final String kid) {
+		public Builder keyID(final String kid) {
 			
 			this.kid = kid;
 			return this;
@@ -328,7 +350,7 @@ public class OctetKeyPair extends JWK implements AsymmetricJWK, CurveBasedJWK {
 		 * @throws JOSEException If the SHA-256 hash algorithm is not
 		 *                       supported.
 		 */
-		public OctetKeyPair.Builder keyIDFromThumbprint()
+		public Builder keyIDFromThumbprint()
 			throws JOSEException {
 			
 			return keyIDFromThumbprint("SHA-256");
@@ -350,7 +372,7 @@ public class OctetKeyPair extends JWK implements AsymmetricJWK, CurveBasedJWK {
 		 * @throws JOSEException If the hash algorithm is not
 		 *                       supported.
 		 */
-		public OctetKeyPair.Builder keyIDFromThumbprint(final String hashAlg)
+		public Builder keyIDFromThumbprint(final String hashAlg)
 			throws JOSEException {
 			
 			// Put mandatory params in sorted order
@@ -371,7 +393,7 @@ public class OctetKeyPair extends JWK implements AsymmetricJWK, CurveBasedJWK {
 		 *
 		 * @return This builder.
 		 */
-		public OctetKeyPair.Builder x509CertURL(final URI x5u) {
+		public Builder x509CertURL(final URI x5u) {
 			
 			this.x5u = x5u;
 			return this;
@@ -388,7 +410,7 @@ public class OctetKeyPair extends JWK implements AsymmetricJWK, CurveBasedJWK {
 		 * @return This builder.
 		 */
 		@Deprecated
-		public OctetKeyPair.Builder x509CertThumbprint(final Base64URL x5t) {
+		public Builder x509CertThumbprint(final Base64URL x5t) {
 			
 			this.x5t = x5t;
 			return this;
@@ -404,7 +426,7 @@ public class OctetKeyPair extends JWK implements AsymmetricJWK, CurveBasedJWK {
 		 *
 		 * @return This builder.
 		 */
-		public OctetKeyPair.Builder x509CertSHA256Thumbprint(final Base64URL x5t256) {
+		public Builder x509CertSHA256Thumbprint(final Base64URL x5t256) {
 			
 			this.x5t256 = x5t256;
 			return this;
@@ -419,9 +441,54 @@ public class OctetKeyPair extends JWK implements AsymmetricJWK, CurveBasedJWK {
 		 *
 		 * @return This builder.
 		 */
-		public OctetKeyPair.Builder x509CertChain(final List<Base64> x5c) {
+		public Builder x509CertChain(final List<Base64> x5c) {
 			
 			this.x5c = x5c;
+			return this;
+		}
+		
+		
+		/**
+		 * Sets the expiration time ({@code exp}) of the JWK.
+		 *
+		 * @param exp The expiration time, {@code null} if not
+		 *            specified.
+		 *
+		 * @return This builder.
+		 */
+		public Builder expirationTime(final Date exp) {
+			
+			this.exp = exp;
+			return this;
+		}
+		
+		
+		/**
+		 * Sets the not-before time ({@code nbf}) of the JWK.
+		 *
+		 * @param nbf The not-before time, {@code null} if not
+		 *            specified.
+		 *
+		 * @return This builder.
+		 */
+		public Builder notBeforeTime(final Date nbf) {
+			
+			this.nbf = nbf;
+			return this;
+		}
+		
+		
+		/**
+		 * Sets the issued-at time ({@code iat}) of the JWK.
+		 *
+		 * @param iat The issued-at time, {@code null} if not
+		 *            specified.
+		 *
+		 * @return This builder.
+		 */
+		public Builder issueTime(final Date iat) {
+			
+			this.iat = iat;
 			return this;
 		}
 		
@@ -434,7 +501,7 @@ public class OctetKeyPair extends JWK implements AsymmetricJWK, CurveBasedJWK {
 		 *
 		 * @return This builder.
 		 */
-		public OctetKeyPair.Builder keyStore(final KeyStore keyStore) {
+		public Builder keyStore(final KeyStore keyStore) {
 			
 			this.ks = keyStore;
 			return this;
@@ -454,11 +521,11 @@ public class OctetKeyPair extends JWK implements AsymmetricJWK, CurveBasedJWK {
 			try {
 				if (d == null) {
 					// Public key
-					return new OctetKeyPair(crv, x, use, ops, alg, kid, x5u, x5t, x5t256, x5c, ks);
+					return new OctetKeyPair(crv, x, use, ops, alg, kid, x5u, x5t, x5t256, x5c, exp, nbf, iat, ks);
 				}
 				
 				// Public / private key pair with 'd'
-				return new OctetKeyPair(crv, x, d, use, ops, alg, kid, x5u, x5t, x5t256, x5c, ks);
+				return new OctetKeyPair(crv, x, d, use, ops, alg, kid, x5u, x5t, x5t256, x5c, exp, nbf, iat, ks);
 				
 			} catch (IllegalArgumentException e) {
 				throw new IllegalStateException(e.getMessage(), e);
@@ -524,12 +591,85 @@ public class OctetKeyPair extends JWK implements AsymmetricJWK, CurveBasedJWK {
 	 * @param ks     Reference to the underlying key store, {@code null} if
 	 *               not specified.
 	 */
+	@Deprecated
 	public OctetKeyPair(final Curve crv, final Base64URL x,
 			    final KeyUse use, final Set<KeyOperation> ops, final Algorithm alg, final String kid,
 			    final URI x5u, final Base64URL x5t, final Base64URL x5t256, final List<Base64> x5c,
 			    final KeyStore ks) {
 		
-		super(KeyType.OKP, use, ops, alg, kid, x5u, x5t, x5t256, x5c, ks);
+		this(crv, x, use, ops, alg, kid, x5u, x5t, x5t256, x5c, null, null, null, ks);
+	}
+	
+	
+	/**
+	 * Creates a new public / private Octet Key Pair JSON Web Key (JWK)
+	 * with the specified parameters.
+	 *
+	 * @param crv    The cryptographic curve. Must not be {@code null}.
+	 * @param x      The public 'x' parameter. Must not be {@code null}.
+	 * @param d      The private 'd' parameter. Must not be {@code null}.
+	 * @param use    The key use, {@code null} if not specified or if the
+	 *               key is intended for signing as well as encryption.
+	 * @param ops    The key operations, {@code null} if not specified.
+	 * @param alg    The intended JOSE algorithm for the key, {@code null}
+	 *               if not specified.
+	 * @param kid    The key ID, {@code null} if not specified.
+	 * @param x5u    The X.509 certificate URL, {@code null} if not
+	 *               specified.
+	 * @param x5t    The X.509 certificate SHA-1 thumbprint, {@code null}
+	 *               if not specified.
+	 * @param x5t256 The X.509 certificate SHA-256 thumbprint, {@code null}
+	 *               if not specified.
+	 * @param x5c    The X.509 certificate chain, {@code null} if not
+	 *               specified.
+	 * @param ks     Reference to the underlying key store, {@code null} if
+	 *               not specified.
+	 */
+	@Deprecated
+	public OctetKeyPair(final Curve crv, final Base64URL x, final Base64URL d,
+			    final KeyUse use, final Set<KeyOperation> ops, final Algorithm alg, final String kid,
+			    final URI x5u, final Base64URL x5t, final Base64URL x5t256, final List<Base64> x5c,
+			    final KeyStore ks) {
+		
+		this(crv, x, d, use, ops, alg, kid, x5u, x5t, x5t256, x5c, null, null, null, ks);
+	}
+
+
+	/**
+	 * Creates a new public Octet Key Pair JSON Web Key (JWK) with the
+	 * specified parameters.
+	 *
+	 * @param crv    The cryptographic curve. Must not be {@code null}.
+	 * @param x      The public 'x' parameter. Must not be {@code null}.
+	 * @param use    The key use, {@code null} if not specified or if the
+	 *               key is intended for signing as well as encryption.
+	 * @param ops    The key operations, {@code null} if not specified.
+	 * @param alg    The intended JOSE algorithm for the key, {@code null}
+	 *               if not specified.
+	 * @param kid    The key ID, {@code null} if not specified.
+	 * @param x5u    The X.509 certificate URL, {@code null} if not
+	 *               specified.
+	 * @param x5t    The X.509 certificate SHA-1 thumbprint, {@code null}
+	 *               if not specified.
+	 * @param x5t256 The X.509 certificate SHA-256 thumbprint, {@code null}
+	 *               if not specified.
+	 * @param x5c    The X.509 certificate chain, {@code null} if not
+	 *               specified.
+	 * @param exp    The key expiration time, {@code null} if not
+	 *               specified.
+	 * @param nbf    The key not-before time, {@code null} if not
+	 *               specified.
+	 * @param iat    The key issued-at time, {@code null} if not specified.
+	 * @param ks     Reference to the underlying key store, {@code null} if
+	 *               not specified.
+	 */
+	public OctetKeyPair(final Curve crv, final Base64URL x,
+			    final KeyUse use, final Set<KeyOperation> ops, final Algorithm alg, final String kid,
+			    final URI x5u, final Base64URL x5t, final Base64URL x5t256, final List<Base64> x5c,
+			    final Date exp, final Date nbf, final Date iat,
+			    final KeyStore ks) {
+		
+		super(KeyType.OKP, use, ops, alg, kid, x5u, x5t, x5t256, x5c, exp, nbf, iat, ks);
 		
 		if (crv == null) {
 			throw new IllegalArgumentException("The curve must not be null");
@@ -574,15 +714,21 @@ public class OctetKeyPair extends JWK implements AsymmetricJWK, CurveBasedJWK {
 	 *               if not specified.
 	 * @param x5c    The X.509 certificate chain, {@code null} if not
 	 *               specified.
+	 * @param exp    The key expiration time, {@code null} if not
+	 *               specified.
+	 * @param nbf    The key not-before time, {@code null} if not
+	 *               specified.
+	 * @param iat    The key issued-at time, {@code null} if not specified.
 	 * @param ks     Reference to the underlying key store, {@code null} if
 	 *               not specified.
 	 */
 	public OctetKeyPair(final Curve crv, final Base64URL x, final Base64URL d,
 			    final KeyUse use, final Set<KeyOperation> ops, final Algorithm alg, final String kid,
 			    final URI x5u, final Base64URL x5t, final Base64URL x5t256, final List<Base64> x5c,
+			    final Date exp, final Date nbf, final Date iat,
 			    final KeyStore ks) {
 		
-		super(KeyType.OKP, use, ops, alg, kid, x5u, x5t, x5t256, x5c, ks);
+		super(KeyType.OKP, use, ops, alg, kid, x5u, x5t, x5t256, x5c, exp, nbf, iat, ks);
 		
 		if (crv == null) {
 			throw new IllegalArgumentException("The curve must not be null");
@@ -726,6 +872,7 @@ public class OctetKeyPair extends JWK implements AsymmetricJWK, CurveBasedJWK {
 			getCurve(), getX(),
 			getKeyUse(), getKeyOperations(), getAlgorithm(), getKeyID(),
 			getX509CertURL(), getX509CertThumbprint(), getX509CertSHA256Thumbprint(), getX509CertChain(),
+			getExpirationTime(), getNotBeforeTime(), getIssueTime(),
 			getKeyStore());
 	}
 	
@@ -817,6 +964,9 @@ public class OctetKeyPair extends JWK implements AsymmetricJWK, CurveBasedJWK {
 					JWKMetadata.parseX509CertThumbprint(jsonObject),
 					JWKMetadata.parseX509CertSHA256Thumbprint(jsonObject),
 					JWKMetadata.parseX509CertChain(jsonObject),
+					JWKMetadata.parseExpirationTime(jsonObject),
+					JWKMetadata.parseNotBeforeTime(jsonObject),
+					JWKMetadata.parseIssueTime(jsonObject),
 					null);
 				
 			} else {
@@ -830,6 +980,9 @@ public class OctetKeyPair extends JWK implements AsymmetricJWK, CurveBasedJWK {
 					JWKMetadata.parseX509CertThumbprint(jsonObject),
 					JWKMetadata.parseX509CertSHA256Thumbprint(jsonObject),
 					JWKMetadata.parseX509CertChain(jsonObject),
+					JWKMetadata.parseExpirationTime(jsonObject),
+					JWKMetadata.parseNotBeforeTime(jsonObject),
+					JWKMetadata.parseIssueTime(jsonObject),
 					null);
 			}
 			

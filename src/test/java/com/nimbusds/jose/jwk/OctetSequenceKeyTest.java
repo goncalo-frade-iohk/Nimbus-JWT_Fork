@@ -472,6 +472,57 @@ public class OctetSequenceKeyTest extends TestCase {
 	}
 
 
+	public void testCopyBuilder()
+		throws Exception {
+
+		Base64URL k = new Base64URL("GawgguFyGrWKav7AX4VKUg");
+		URI x5u = new URI("http://example.com/jwk.json");
+		Base64URL x5t = new Base64URL("abc");
+		List<Base64> x5c = SampleCertificates.SAMPLE_X5C_RSA;
+
+		Set<KeyOperation> ops = new LinkedHashSet<>(Arrays.asList(KeyOperation.SIGN, KeyOperation.VERIFY));
+		
+		KeyStore keyStore = KeyStore.getInstance(KeyStore.getDefaultType());
+
+		OctetSequenceKey key = new OctetSequenceKey.Builder(k)
+			.keyOperations(ops)
+			.algorithm(JWSAlgorithm.HS256)
+			.keyID("1")
+			.x509CertURL(x5u)
+			.x509CertThumbprint(x5t)
+			.x509CertChain(x5c)
+			.expirationTime(EXP)
+			.notBeforeTime(NBF)
+			.issueTime(IAT)
+			.keyStore(keyStore)
+			.build();
+		
+		// Copy
+		key = new OctetSequenceKey.Builder(key).build();
+
+		assertEquals(KeyType.OCT, key.getKeyType());
+		assertNull(key.getKeyUse());
+		assertTrue(key.getKeyOperations().contains(KeyOperation.SIGN));
+		assertTrue(key.getKeyOperations().contains(KeyOperation.VERIFY));
+		assertEquals(2, key.getKeyOperations().size());
+		assertEquals(JWSAlgorithm.HS256, key.getAlgorithm());
+		assertEquals("1", key.getKeyID());
+		assertEquals(x5u.toString(), key.getX509CertURL().toString());
+		assertEquals(x5t.toString(), key.getX509CertThumbprint().toString());
+		assertEquals(x5c.size(), key.getX509CertChain().size());
+		assertEquals(EXP, key.getExpirationTime());
+		assertEquals(NBF, key.getNotBeforeTime());
+		assertEquals(IAT, key.getIssueTime());
+		assertEquals(keyStore, key.getKeyStore());
+
+		assertEquals(k, key.getKeyValue());
+
+		assertNull(key.toPublicJWK());
+
+		assertTrue(key.isPrivate());
+	}
+
+
 	public void testBuilderWithByteArray() {
 
 		byte[] key = new byte[32];

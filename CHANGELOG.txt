@@ -1491,3 +1491,4 @@ version 9.25.6 (2022-10-13)
 version 9.26 (2022-12-26)
     * JWK adds support for exp, nbf and exp parameters as specified in OpenID
       Connect Federation 1.0
+    * Adds copy OctetSequenceKey.Builder.

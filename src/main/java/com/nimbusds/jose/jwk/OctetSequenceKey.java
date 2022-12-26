@@ -213,6 +213,30 @@ public final class OctetSequenceKey extends JWK implements SecretJWK {
 
 			this(secretKey.getEncoded());
 		}
+		
+		
+		/**
+		 * Creates a new octet sequence JWK builder.
+		 *
+		 * @param octJWK The octet sequence JWK to start with. Must not
+		 *               be {@code null}.
+		 */
+		public Builder(final OctetSequenceKey octJWK) {
+			
+			k = octJWK.k;
+			use = octJWK.getKeyUse();
+			ops = octJWK.getKeyOperations();
+			alg = octJWK.getAlgorithm();
+			kid = octJWK.getKeyID();
+			x5u = octJWK.getX509CertURL();
+			x5t = octJWK.getX509CertThumbprint();
+			x5t256 = octJWK.getX509CertSHA256Thumbprint();
+			x5c = octJWK.getX509CertChain();
+			exp = octJWK.getExpirationTime();
+			nbf = octJWK.getNotBeforeTime();
+			iat = octJWK.getIssueTime();
+			ks = octJWK.getKeyStore();
+		}
 
 
 		/**

@@ -44,7 +44,7 @@ import com.nimbusds.jose.jwk.ECKey;
  *
  * @author Vladimir Dzhuvinov
  * @author Justin Cranford
- * @version 2022-09-13
+ * @version 2023-01-02
  */
 public class ECKeyGenerator extends JWKGenerator<ECKey> {
 	
@@ -100,6 +100,9 @@ public class ECKeyGenerator extends JWKGenerator<ECKey> {
 			.keyUse(use)
 			.keyOperations(ops)
 			.algorithm(alg)
+			.expirationTime(exp)
+			.notBeforeTime(nbf)
+			.issueTime(iat)
 			.keyStore(keyStore);
 		
 		if (x5tKid) {

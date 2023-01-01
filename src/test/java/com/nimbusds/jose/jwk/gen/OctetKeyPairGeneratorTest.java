@@ -19,6 +19,7 @@ package com.nimbusds.jose.jwk.gen;
 
 
 import java.util.Collections;
+import java.util.Date;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -27,14 +28,21 @@ import com.nimbusds.jose.JWEAlgorithm;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.jwk.*;
 import com.nimbusds.jose.util.Base64URL;
+import com.nimbusds.jwt.util.DateUtils;
+
 import junit.framework.TestCase;
 
 
 /**
  * @author Tim McLean
- * @version 2018-07-18
+ * @version 2023-01-02
  */
 public class OctetKeyPairGeneratorTest extends TestCase {
+	
+	
+	private static final Date EXP = DateUtils.fromSecondsSinceEpoch(13_000_000L);
+	private static final Date NBF = DateUtils.fromSecondsSinceEpoch(12_000_000L);
+	private static final Date IAT = DateUtils.fromSecondsSinceEpoch(11_000_000L);
 
 
 	public void testX25519GenMinimal()
@@ -49,6 +57,9 @@ public class OctetKeyPairGeneratorTest extends TestCase {
 		assertNull(okp.getKeyOperations());
 		assertNull(okp.getAlgorithm());
 		assertNull(okp.getKeyID());
+		assertNull(okp.getExpirationTime());
+		assertNull(okp.getNotBeforeTime());
+		assertNull(okp.getIssueTime());
 		assertNull(okp.getKeyStore());
 
 		byte[] privateKeyBytes = okp.getD().decode();
@@ -183,5 +194,20 @@ public class OctetKeyPairGeneratorTest extends TestCase {
 			assertTrue(values.add(k.getD()));
 			assertTrue(values.add(k.getX()));
 		}
+	}
+	
+	
+	public void testGenWithTimestamps() throws JOSEException {
+		
+		OctetKeyPair okp = new OctetKeyPairGenerator(Curve.Ed25519)
+			.keyUse(KeyUse.SIGNATURE)
+			.expirationTime(EXP)
+			.notBeforeTime(NBF)
+			.issueTime(IAT)
+			.generate();
+		
+		assertEquals(EXP, okp.getExpirationTime());
+		assertEquals(NBF, okp.getNotBeforeTime());
+		assertEquals(IAT, okp.getIssueTime());
 	}
 }

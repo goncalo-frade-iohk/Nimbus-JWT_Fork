@@ -1493,3 +1493,7 @@ version 9.26 (2022-12-26)
       Connect Federation 1.0.
     * Adds copy OctetSequenceKey.Builder.
     * Updates GSon to 2.10.
+
+version 9.27 (2023-01-02)
+    * JWKGenerator classes add support for exp, nbf and exp time attributes as
+      specified in OpenID Connect Federation 1.0.

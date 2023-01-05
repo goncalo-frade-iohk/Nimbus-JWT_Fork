@@ -29,7 +29,7 @@ import net.jcip.annotations.Immutable;
  * Algorithm family.
  *
  * @author Vladimir Dzhuvinov
- * @version 2023-01-05
+ * @version 2016-08-24
  */
 @Immutable
 class AlgorithmFamily <T extends Algorithm> extends LinkedHashSet<T> {
@@ -44,7 +44,9 @@ class AlgorithmFamily <T extends Algorithm> extends LinkedHashSet<T> {
 	 * @param algs The algorithms of the family. Must not be {@code null}.
 	 */
 	public AlgorithmFamily(final T ... algs) {
-		super.addAll(Arrays.asList(algs));
+		for (T alg: algs) {
+			super.add(alg);
+		}
 	}
 
 

@@ -51,4 +51,7 @@ class HeaderValidation {
 			}
 		}
 	}
+	
+	
+	private HeaderValidation() {}
 }

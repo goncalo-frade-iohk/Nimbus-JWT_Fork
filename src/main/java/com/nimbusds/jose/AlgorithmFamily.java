@@ -18,6 +18,7 @@
 package com.nimbusds.jose;
 
 
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.LinkedHashSet;
 
@@ -28,7 +29,7 @@ import net.jcip.annotations.Immutable;
  * Algorithm family.
  *
  * @author Vladimir Dzhuvinov
- * @version 2016-08-24
+ * @version 2023-01-05
  */
 @Immutable
 class AlgorithmFamily <T extends Algorithm> extends LinkedHashSet<T> {
@@ -43,9 +44,7 @@ class AlgorithmFamily <T extends Algorithm> extends LinkedHashSet<T> {
 	 * @param algs The algorithms of the family. Must not be {@code null}.
 	 */
 	public AlgorithmFamily(final T ... algs) {
-		for (T alg: algs) {
-			super.add(alg);
-		}
+		super.addAll(Arrays.asList(algs));
 	}
 
 

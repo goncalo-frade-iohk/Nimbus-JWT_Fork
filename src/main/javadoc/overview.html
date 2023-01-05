@@ -76,7 +76,7 @@
 			encryption / decryption. Multiple JCA providers, including
 			hardware-based can be configured.</p>
 		
-		<p>Implemented IETF standards and drafts:</p>
+		<p>Supported specifications:</p>
 		
 		<ol>
 			<li><a href="https://tools.ietf.org/html/rfc7515">RFC 7515 - JWS</a></li>
@@ -84,23 +84,26 @@
 			<li><a href="https://tools.ietf.org/html/rfc7517">RFC 7517 - JWK</a></li>
 			<li><a href="https://tools.ietf.org/html/rfc7518">RFC 7518 - JWA</a></li>
 			<li><a href="https://tools.ietf.org/html/rfc7519">RFC 7519 - JWT</a></li>
+			<li><a href="https://tools.ietf.org/html/rfc7165">RFC 7165 - Use Cases and Requirements for JSON Object Signing and Encryption (JOSE)</a></li>
+			<li><a href="https://tools.ietf.org/html/rfc7520">RFC 7520 - Examples of Protecting Content Using JSON Object Signing and Encryption (JOSE)</a></li>
 			<li><a href="https://tools.ietf.org/html/rfc7638">RFC 7638 - JWK Thumbprint</a></li>
 			<li><a href="https://tools.ietf.org/html/rfc7797">RFC 7797 - JWS Unencoded Payload Option</a></li>
 			<li><a href="https://tools.ietf.org/html/rfc8037">RFC 8037 - CFRG ECDH and Signatures in JOSE</a></li>
-			<li><a href="https://www.rfc-editor.org/rfc/rfc8812.html">RFC 8812 - CBOR Object Signing and Encryption (COSE) and JSON Object Signing and Encryption (JOSE) Registrations for Web Authentication (WebAuthn) Algorithms</a></li>
-			<li><a href="https://datatracker.ietf.org/doc/html/draft-ietf-oauth-jwk-thumbprint-uri-01">draft-ietf-oauth-jwk-thumbprint-uri-01 - JSON Web Key (JWK) Thumbprint URI</a></li>
+			<li><a href="https://tools.ietf.org/html/rfc8812">RFC 8812 - CBOR Object Signing and Encryption (COSE) and JSON Object Signing and Encryption (JOSE) Registrations for Web Authentication (WebAuthn) Algorithms</a></li>
+			<li><a href="https://tools.ietf.org/html/rfc9278">RFC 9278 - JWK Thumbprint URI</a></li>
 			<li><a href="https://datatracker.ietf.org/doc/html/draft-madden-jose-ecdh-1pu-04">draft-madden-jose-ecdh-1pu-04 - Public Key Authenticated Encryption for JOSE: ECDH-1PU</a></li>
 			<li><a href="https://tools.ietf.org/id/draft-amringer-jose-chacha-02.html">draft-amringer-jose-chacha-02 - Chacha derived AEAD algorithms in JSON Object Signing and Encryption (JOSE)</a> (support for XC20P only)</li>
 			<li><a href="https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-xchacha-03">XChaCha: eXtended-nonce ChaCha and AEAD_XChaCha20_Poly1305</a></li>
+			<li><a href="https://openid.net/specs/openid-connect-federation-1_0.html">OpenID Connect Federation 1.0 (JWK exp, nbf and iat parameters)</a></li>
 		</ol>
 		
 		<p>Dependencies (see the Maven pom.xml for details):</p>
 		
 		<ol>
 			<li>JCIP for concurrency annotations</li>
-			<li>[shadowed] JSON Smart for efficient parsing and serialisation of JSON</li>
+			<li>[shaded] GSon for parsing and serialisation of JSON</li>
 			<li>[optional] BouncyCastle as an alternative JCA provider and for selected key and certificate utilities</li>
-			<li>[optional] Google Tink for OKP key generation, EdDSA with Ed25519, ECDH with X25519 and content encryption with XC20P</li>
+			<li>[optional] Tink for OKP generation, EdDSA with Ed25519, ECDH with X25519 and content encryption with XC20P</li>
 		</ol>
 
 

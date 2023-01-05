@@ -15,9 +15,27 @@
  * specific language governing permissions and limitations under the License.
  */
 
-/**
- * JSON Web Key (JWK) sourcing interface and utilities. Typical sources can be
- * a local text file containing a JWK set, a JWK set specified by URL, a Java
- * keystore, or a database.
- */
 package com.nimbusds.jose.jwk.source;
+
+
+import com.nimbusds.jose.KeySourceException;
+
+
+/**
+ * Rate limit reached exception.
+ *
+ * @author Thomas Rørvik Skjølberg
+ * @version 2022-04-09
+ */
+public class RateLimitReachedException extends KeySourceException {
+
+	private static final long serialVersionUID = 1L;
+	
+	
+	/**
+	 * Creates a new rate limit reached exception.
+	 */
+	public RateLimitReachedException() {
+		super();
+	}
+}

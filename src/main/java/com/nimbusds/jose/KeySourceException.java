@@ -22,7 +22,7 @@ package com.nimbusds.jose;
  * Key source exception.
  *
  * @author Vladimir Dzhuvinov
- * @version 2016-06-21
+ * @version 2023-01-05
  */
 public class KeySourceException extends JOSEException {
 	
@@ -45,6 +45,24 @@ public class KeySourceException extends JOSEException {
 	 */
 	public KeySourceException(final String message, final Throwable cause) {
 		super(message, cause);
+	}
+
+	/**
+	 * Creates a new key source exception.
+	 *
+	 * @param cause The cause.
+	 */
+
+	public KeySourceException(final Throwable cause) {
+		super(cause);
+	}
+
+	
+	/**
+	 * Creates a new key source exception.
+	 */
+	public KeySourceException() {
+		super();
 	}
 }
 

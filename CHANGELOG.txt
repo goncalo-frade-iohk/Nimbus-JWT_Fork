@@ -1497,3 +1497,26 @@ version 9.26 (2022-12-26)
 version 9.27 (2023-01-02)
     * JWKGenerator classes add support for exp, nbf and exp time attributes as
       specified in OpenID Connect Federation 1.0.
+
+version 9.28 (2023-01-05)
+    * New JWKSourceBuilder entry point for building JWKSource instances that
+      wrap a generic JWKSetSource with caching (including refresh ahead), rate
+      limiting, retrial, fail-over, health status reporting and outage
+      tolerance capabilities.
+    * New CachingJWKSetSource, RefreshAheadCachingJWKSetSource,
+      RateLimitedJWKSetSource, RetryingJWKSetSource, JWKSourceWithFailover,
+      JWKSetSourceWithHealthStatusReporting and
+      OutageTolerantJWKSetSource classes wrapping a generic JWKSetSource with a
+      capability.
+    * Deprecates the JWKSetCache interface and its DefaultJWKSetCache
+      implementation.
+    * Deprecates the RemoteJWKSet class.
+    * Deprecates the JWKSetWithTimestamp class.
+    * DefaultResourceRetriever adds support for file based URLs.
+    * New JWKSet isEmpty and size shorthand methods.
+    * New com.nimbusds.jose.util.cache package with generic CachedObject class.
+    * New com.nimbusds.jose.util.events package with Event and EventListener
+      interfaces.
+    * New com.nimbusds.jose.util.health package with HealthReportListener
+      interface, HealthReport class and HealthStatus enum.
+    * New IOUtils.closeSilently(java.io.Closeable) method.

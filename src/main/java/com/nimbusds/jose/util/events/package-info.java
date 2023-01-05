@@ -1,7 +1,7 @@
 /*
  * nimbus-jose-jwt
  *
- * Copyright 2012-2022, Connect2id Ltd.
+ * Copyright 2012-2016, Connect2id Ltd and contributors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use
  * this file except in compliance with the License. You may obtain a copy of the
@@ -16,8 +16,6 @@
  */
 
 /**
- * JSON Web Key (JWK) sourcing interface and utilities. Typical sources can be
- * a local text file containing a JWK set, a JWK set specified by URL, a Java
- * keystore, or a database.
+ * Event listener interfaces.
  */
-package com.nimbusds.jose.jwk.source;
+package com.nimbusds.jose.util.events;

@@ -112,6 +112,21 @@ public class IOUtils {
 	
 	
 	/**
+	 * Closes a {@linkplain Closeable} without throwing an
+	 * {@linkplain IOException}.
+	 * 
+	 * @param closeable The closeable.
+	 */
+	public static void closeSilently(final Closeable closeable) {
+		try {
+			closeable.close();
+		} catch (IOException e) {
+			// ignore
+		}
+	}
+	
+	
+	/**
 	 * Prevents public instantiation.
 	 */
 	private IOUtils() {}

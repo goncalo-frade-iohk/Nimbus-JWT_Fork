@@ -1,7 +1,7 @@
 /*
  * nimbus-jose-jwt
  *
- * Copyright 2012-2022, Connect2id Ltd.
+ * Copyright 2012-2016, Connect2id Ltd and contributors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use
  * this file except in compliance with the License. You may obtain a copy of the
@@ -15,9 +15,26 @@
  * specific language governing permissions and limitations under the License.
  */
 
+package com.nimbusds.jose.util.health;
+
+
 /**
- * JSON Web Key (JWK) sourcing interface and utilities. Typical sources can be
- * a local text file containing a JWK set, a JWK set specified by URL, a Java
- * keystore, or a database.
+ * Health status.
+ *
+ * @version 2022-08-24
+ * @author Vladimir Dzhuvinov
  */
-package com.nimbusds.jose.jwk.source;
+public enum HealthStatus {
+	
+	
+	/**
+	 * Healthy.
+	 */
+	HEALTHY,
+	
+	
+	/**
+	 * Not healthy (error).
+	 */
+	NOT_HEALTHY
+}

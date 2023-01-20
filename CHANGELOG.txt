@@ -1520,3 +1520,6 @@ version 9.28 (2023-01-05)
     * New com.nimbusds.jose.util.health package with HealthReportListener
       interface, HealthReport class and HealthStatus enum.
     * New IOUtils.closeSilently(java.io.Closeable) method.
+
+version 9.29 (2023-01-20)
+    * Adds static DateUtils.nowWithSecondsPrecision method.

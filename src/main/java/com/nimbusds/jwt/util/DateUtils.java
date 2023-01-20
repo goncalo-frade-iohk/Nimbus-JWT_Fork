@@ -25,6 +25,17 @@ import java.util.Date;
  * Date utilities.
  */
 public class DateUtils {
+	
+	
+	/**
+	 * Returns the current date, with the milliseconds removed.
+	 *
+	 * @return The current date, with seconds precision.
+	 */
+	public static Date nowWithSecondsPrecision() {
+		
+		return fromSecondsSinceEpoch(toSecondsSinceEpoch(new Date()));
+	}
 
 
 	/**

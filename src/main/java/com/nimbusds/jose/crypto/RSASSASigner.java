@@ -157,13 +157,11 @@ public class RSASSASigner extends RSASSAProvider implements JWSSigner {
 	 */
 	public RSASSASigner(final PrivateKey privateKey, final Set<JWSSignerOption> opts) {
 		
-		if (priv instanceof RSAPrivateKey) {
-		    return this.privateKey((RSAPrivateKey)priv);
+		if (privateKey instanceof RSAPrivateKey) {
+		    this.privateKey = (RSAPrivateKey)privateKey;
 		} else if (!"RSA".equalsIgnoreCase(priv.getAlgorithm())) {
 			throw new IllegalArgumentException("The private key algorithm must be RSA");
-		}
-		
-		this.privateKey = privateKey;
+		} 
 		
 		this.opts = opts != null ? opts : Collections.<JWSSignerOption>emptySet();
 		

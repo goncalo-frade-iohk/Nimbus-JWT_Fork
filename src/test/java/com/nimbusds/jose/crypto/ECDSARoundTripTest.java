@@ -146,7 +146,12 @@ public class ECDSARoundTripTest extends TestCase {
 		throws Exception {
 
 		// Create the public and private keys
-		KeyPairGenerator keyGenerator = KeyPairGenerator.getInstance("EC", provider);
+		KeyPairGenerator keyGenerator;
+		if (provider == null) {
+			keyGenerator = KeyPairGenerator.getInstance("EC");
+		} else {
+			keyGenerator = KeyPairGenerator.getInstance("EC", provider);
+		}
 		keyGenerator.initialize(spec);
 		return keyGenerator.generateKeyPair();
 	}

@@ -29,6 +29,7 @@ import junit.framework.TestCase;
 
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
+import com.nimbusds.jose.crypto.bc.BouncyCastleProviderSingleton;
 import com.nimbusds.jose.jwk.KeyOperation;
 import com.nimbusds.jose.jwk.KeyUse;
 import com.nimbusds.jose.jwk.RSAKey;
@@ -83,6 +84,17 @@ public class RSAKeyGeneratorTest extends TestCase {
 		assertNull(rsaJWK.getNotBeforeTime());
 		assertNull(rsaJWK.getIssueTime());
 		assertNull(rsaJWK.getKeyStore());
+	}
+	
+	
+	public void testWithBouncyCastleProvider()
+		throws JOSEException  {
+		
+		RSAKey rsaJWK = new RSAKeyGenerator(2048)
+			.provider(BouncyCastleProviderSingleton.getInstance())
+			.generate();
+		
+		assertEquals(2048, rsaJWK.size());
 	}
 	
 	

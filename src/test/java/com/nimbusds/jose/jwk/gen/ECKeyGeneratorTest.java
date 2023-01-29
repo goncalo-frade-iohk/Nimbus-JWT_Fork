@@ -19,16 +19,14 @@ package com.nimbusds.jose.jwk.gen;
 
 
 import java.security.SecureRandom;
-import java.util.Collections;
-import java.util.Date;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import junit.framework.TestCase;
 
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
+import com.nimbusds.jose.crypto.bc.BouncyCastleProviderSingleton;
 import com.nimbusds.jose.jwk.*;
 import com.nimbusds.jose.util.Base64URL;
 import com.nimbusds.jwt.util.DateUtils;
@@ -45,19 +43,36 @@ public class ECKeyGeneratorTest extends TestCase {
 	public void testGenMinimal()
 		throws JOSEException  {
 		
-		ECKey ecJWK = new ECKeyGenerator(Curve.P_256)
-			.generate();
+		for (Curve curve: Arrays.asList(Curve.P_256, Curve.P_384, Curve.P_521)) {
+			
+			ECKey ecJWK = new ECKeyGenerator(curve)
+				.generate();
+			
+			assertEquals(curve, ecJWK.getCurve());
+			
+			assertNull(ecJWK.getKeyUse());
+			assertNull(ecJWK.getKeyOperations());
+			assertNull(ecJWK.getAlgorithm());
+			assertNull(ecJWK.getKeyID());
+			assertNull(ecJWK.getExpirationTime());
+			assertNull(ecJWK.getNotBeforeTime());
+			assertNull(ecJWK.getIssueTime());
+			assertNull(ecJWK.getKeyStore());
+		}
+	}
+	
+	
+	public void testWithBouncyCastleProvider()
+		throws JOSEException  {
 		
-		assertEquals(Curve.P_256, ecJWK.getCurve());
-		
-		assertNull(ecJWK.getKeyUse());
-		assertNull(ecJWK.getKeyOperations());
-		assertNull(ecJWK.getAlgorithm());
-		assertNull(ecJWK.getKeyID());
-		assertNull(ecJWK.getExpirationTime());
-		assertNull(ecJWK.getNotBeforeTime());
-		assertNull(ecJWK.getIssueTime());
-		assertNull(ecJWK.getKeyStore());
+		for (Curve curve: Arrays.asList(Curve.P_256, Curve.P_384, Curve.P_521, Curve.SECP256K1)) {
+			
+			ECKey ecJWK = new ECKeyGenerator(curve)
+				.provider(BouncyCastleProviderSingleton.getInstance())
+				.generate();
+			
+			assertEquals(curve, ecJWK.getCurve());
+		}
 	}
 	
 	

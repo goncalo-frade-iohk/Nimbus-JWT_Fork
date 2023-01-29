@@ -32,7 +32,7 @@ import com.nimbusds.jose.jwk.RSAKey;
  *
  * @author Vladimir Dzhuvinov
  * @author Justin Cranford
- * @version 2023-01-02
+ * @version 2023-01-29
  */
 public class RSAKeyGenerator extends JWKGenerator<RSAKey> {
 	
@@ -87,6 +87,8 @@ public class RSAKeyGenerator extends JWKGenerator<RSAKey> {
 			if (keyStore != null) {
 				// For PKCS#11
 				generator = KeyPairGenerator.getInstance("RSA", keyStore.getProvider());
+			} else if (provider != null) {
+				generator = KeyPairGenerator.getInstance("RSA", provider);
 			} else {
 				generator = KeyPairGenerator.getInstance("RSA");
 			}

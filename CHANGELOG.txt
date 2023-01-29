@@ -1523,3 +1523,7 @@ version 9.28 (2023-01-05)
 
 version 9.29 (2023-01-20)
     * Adds static DateUtils.nowWithSecondsPrecision method.
+
+version 9.30 (2023-01-29)
+    * Adds ECKeyGenerator and RSAKeyGenerator provider(java.security.Provider)
+      method to set an explicit JCA provider.

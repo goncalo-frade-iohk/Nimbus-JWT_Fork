@@ -32,6 +32,7 @@ import java.util.List;
 import junit.framework.TestCase;
 
 import com.nimbusds.jose.*;
+import com.nimbusds.jose.crypto.bc.BouncyCastleProviderSingleton;
 import com.nimbusds.jose.crypto.impl.ECDSA;
 import com.nimbusds.jose.jwk.Curve;
 import com.nimbusds.jose.jwk.ECKey;
@@ -46,7 +47,7 @@ import com.nimbusds.jose.util.StandardCharset;
 /**
  * Tests the static ECDSA utilities.
  *
- * @version 2022-04-22
+ * @version 2023-01-29
  */
 public class ECDSATest extends TestCase {
 
@@ -83,7 +84,7 @@ public class ECDSATest extends TestCase {
 	public void testResolveAlgFromECKey_P256K()
 		throws Exception {
 
-		KeyPair keyPair = ECDSARoundTripTest.createECKeyPair(ECDSARoundTripTest.EC256KSPEC);
+		KeyPair keyPair = ECDSARoundTripTest.createECKeyPair(ECDSARoundTripTest.EC256KSPEC, BouncyCastleProviderSingleton.getInstance());
 		ECPublicKey publicKey = (ECPublicKey) keyPair.getPublic();
 		ECPrivateKey privateKey = (ECPrivateKey) keyPair.getPrivate();
 

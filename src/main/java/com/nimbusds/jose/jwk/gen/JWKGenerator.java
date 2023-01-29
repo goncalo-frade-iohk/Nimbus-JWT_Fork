@@ -19,6 +19,7 @@ package com.nimbusds.jose.jwk.gen;
 
 
 import java.security.KeyStore;
+import java.security.Provider;
 import java.security.SecureRandom;
 import java.util.Date;
 import java.util.Set;
@@ -36,7 +37,7 @@ import com.nimbusds.jose.jwk.KeyUse;
  *
  * @author Vladimir Dzhuvinov
  * @author Justin Cranford
- * @version 2023-01-02
+ * @version 2023-01-29
  */
 public abstract class JWKGenerator<T extends JWK> {
 	
@@ -94,6 +95,12 @@ public abstract class JWKGenerator<T extends JWK> {
 	 * Reference to the underlying key store, {@code null} if none.
 	 */
 	protected KeyStore keyStore;
+	
+	
+	/**
+	 * The JCA provider, {@code null} to use the default one.
+	 */
+	protected Provider provider;
 
 
 	/**
@@ -224,7 +231,9 @@ public abstract class JWKGenerator<T extends JWK> {
 	
 	
 	/**
-	 * Sets the underlying key store.
+	 * Sets the underlying key store. Overrides the {@link #provider JCA
+	 * provider} is set. Note, some JWK generators may not use the JCA key
+	 * store API.
 	 *
 	 * @param keyStore Reference to the underlying key store,
 	 *                 {@code null} if none.
@@ -238,17 +247,23 @@ public abstract class JWKGenerator<T extends JWK> {
 	
 	
 	/**
-	 * Generates the JWK according to the set parameters.
+	 * Sets the JCA provider for the key generation. Note, some JWK
+	 * generators may not use the JCA provider API.
 	 *
-	 * @return The generated JWK.
+	 * @param provider The JCA provider, {@code null} to use the default
+	 *                 one.
 	 *
-	 * @throws JOSEException If the key generation failed.
+	 * @return This generator.
 	 */
-	public abstract T generate() throws JOSEException;
-
-
+	public JWKGenerator<T> provider(final Provider provider) {
+		this.provider = provider;
+		return this;
+	}
+	
+	
 	/**
-	 * Sets the secure random generator to use.
+	 * Sets the secure random generator to use. Note, some JWK generators
+	 * may not use the JCA secure random API.
 	 *
 	 * @param secureRandom The secure random generator to use, {@code null}
 	 *                     to use the default one.
@@ -259,4 +274,14 @@ public abstract class JWKGenerator<T extends JWK> {
 		this.secureRandom = secureRandom;
 		return this;
 	}
+	
+	
+	/**
+	 * Generates the JWK according to the set parameters.
+	 *
+	 * @return The generated JWK.
+	 *
+	 * @throws JOSEException If the key generation failed.
+	 */
+	public abstract T generate() throws JOSEException;
 }

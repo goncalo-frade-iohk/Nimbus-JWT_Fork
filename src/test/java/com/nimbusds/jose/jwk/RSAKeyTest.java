@@ -27,12 +27,15 @@ import java.security.cert.X509Certificate;
 import java.security.interfaces.RSAPrivateCrtKey;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
+import java.security.spec.InvalidKeySpecException;
 import java.security.spec.RSAPrivateKeySpec;
+import java.security.spec.RSAPublicKeySpec;
 import java.text.ParseException;
 import java.util.*;
 
 import static org.junit.Assert.assertNotEquals;
 
+import com.nimbusds.jose.crypto.RSASSASigner;
 import junit.framework.TestCase;
 import org.bouncycastle.asn1.x500.X500Name;
 import org.bouncycastle.asn1.x509.Extension;
@@ -1770,6 +1773,21 @@ public class RSAKeyTest extends TestCase {
 			fail();
 		} catch (ParseException e) {
 			assertEquals("The public exponent value must not be null", e.getMessage());
+		}
+	}
+
+	public void testRsaSignerCreateWithRSAPSSAlgorithm() throws JOSEException, NoSuchAlgorithmException, InvalidKeySpecException {
+		List<KeyPair> keyPairs = PEMEncodedKeyParser.parseKeys(SamplePEMEncodedObjects.RSA_PSS_PRIVATE_KEY_PEM);
+		for (KeyPair keyPair : keyPairs) {
+			assertNotNull(keyPair.getPrivate());
+			RSASSASigner signer = new RSASSASigner(keyPair.getPrivate());
+			assertNotNull(signer);
+			RSAPrivateCrtKey crtKey = (RSAPrivateCrtKey) keyPair.getPrivate();
+			RSAPublicKeySpec pubSpec = new RSAPublicKeySpec(crtKey.getModulus(), crtKey.getPublicExponent());
+			RSAKey rsaKey = new RSAKey.Builder((RSAPublicKey) KeyFactory.getInstance("RSA").generatePublic(pubSpec)).privateKey(keyPair.getPrivate()).build();
+			assertNotNull(rsaKey);
+			assertEquals(signer.getPrivateKey(), keyPair.getPrivate());
+			assertTrue(rsaKey.isPrivate());
 		}
 	}
 }

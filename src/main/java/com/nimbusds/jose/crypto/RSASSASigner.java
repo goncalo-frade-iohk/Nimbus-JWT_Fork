@@ -22,6 +22,7 @@ import java.security.InvalidKeyException;
 import java.security.PrivateKey;
 import java.security.Signature;
 import java.security.SignatureException;
+import java.security.interfaces.RSAPrivateKey;
 import java.util.Collections;
 import java.util.Set;
 
@@ -157,9 +158,9 @@ public class RSASSASigner extends RSASSAProvider implements JWSSigner {
 	 */
 	public RSASSASigner(final PrivateKey privateKey, final Set<JWSSignerOption> opts) {
 		
-		if (privateKey instanceof RSAPrivateKey) {
-		    this.privateKey = (RSAPrivateKey)privateKey;
-		} else if (!"RSA".equalsIgnoreCase(priv.getAlgorithm())) {
+		if (privateKey instanceof RSAPrivateKey || "RSA".equalsIgnoreCase(privateKey.getAlgorithm())) {
+		    this.privateKey = privateKey;
+		} else {
 			throw new IllegalArgumentException("The private key algorithm must be RSA");
 		} 
 		

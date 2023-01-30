@@ -42,12 +42,15 @@ public final class SamplePEMEncodedObjects {
     private static final URL RSA_PUBLIC_KEY_PEM_URL = getResource("rsapubkey.pem");
     // openssl req -new -x509 -key src/test/resources/rsaprivkey.pem -days 1095 -out src/test/resources/rsacert.pem
     private static final URL RSA_CERT_PEM_URL = getResource("rsacert.pem");
+    // openssl genpkey -algorithm rsa-pss -pkeyopt rsa_keygen_bits:2048 -pkeyopt rsa_pss_keygen_md:sha256 -pkeyopt rsa_pss_keygen_mgf1_md:sha256 -pkeyopt rsa_pss_keygen_saltlen:32 -out src/test/resources/rsapssprivkey.pem
+    private static final URL RSA_PSS_PRIVATE_KEY_PEM_URL = getResource("rsapssprivkey.pem");
 
     public static final String EC_PRIVATE_KEY_PEM = loadUrl(EC_PRIVATE_KEY_PEM_URL);
     public static final String EC_PUBLIC_KEY_PEM = loadUrl(EC_PUBLIC_KEY_PEM_URL);
     public static final String EC_CERT_PEM = loadUrl(EC_CERT_PEM_URL);
     public static final String RSA_PRIVATE_KEY_PEM = loadUrl(RSA_PRIVATE_KEY_PEM_URL);
     public static final String RSA_PUBLIC_KEY_PEM = loadUrl(RSA_PUBLIC_KEY_PEM_URL);
+    public static final String RSA_PSS_PRIVATE_KEY_PEM = loadUrl(RSA_PSS_PRIVATE_KEY_PEM_URL);
     public static final String RSA_CERT_PEM = loadUrl(RSA_CERT_PEM_URL);
 
     private static URL getResource(final String resourceName) {

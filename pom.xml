@@ -5,7 +5,7 @@
 
     <groupId>com.nimbusds</groupId>
     <artifactId>nimbus-jose-jwt</artifactId>
-    <version>9.30-SNAPSHOT</version>
+    <version>9.31-SNAPSHOT</version>
     <packaging>jar</packaging>
 
     <name>Nimbus JOSE+JWT</name>
@@ -102,7 +102,7 @@
         <dependency>
             <groupId>org.bitbucket.b_c</groupId>
             <artifactId>jose4j</artifactId>
-            <version>0.4.1</version>
+            <version>0.9.2</version>
             <scope>test</scope>
         </dependency>
         <dependency>

@@ -21,12 +21,14 @@ package com.nimbusds.jose.crypto;
 import java.math.BigInteger;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
+import java.security.Provider;
 import java.security.interfaces.ECPrivateKey;
 import java.security.interfaces.ECPublicKey;
 import java.security.spec.*;
 import java.util.Collections;
 import java.util.HashSet;
 
+import com.nimbusds.jose.crypto.bc.BouncyCastleProviderSingleton;
 import com.nimbusds.jwt.JWTClaimNames;
 import junit.framework.TestCase;
 
@@ -44,7 +46,7 @@ import com.nimbusds.jwt.SignedJWT;
  * verification.
  *
  * @author Vladimir Dzhuvinov
- * @version 2018-03-28
+ * @version 2023-01-29
  */
 public class ECDSARoundTripTest extends TestCase {
 
@@ -136,8 +138,20 @@ public class ECDSARoundTripTest extends TestCase {
 	public static KeyPair createECKeyPair(final AlgorithmParameterSpec spec)
 		throws Exception {
 
+		return createECKeyPair(spec, null);
+	}
+
+
+	public static KeyPair createECKeyPair(final AlgorithmParameterSpec spec, final Provider provider)
+		throws Exception {
+
 		// Create the public and private keys
-		KeyPairGenerator keyGenerator = KeyPairGenerator.getInstance("EC");
+		KeyPairGenerator keyGenerator;
+		if (provider == null) {
+			keyGenerator = KeyPairGenerator.getInstance("EC");
+		} else {
+			keyGenerator = KeyPairGenerator.getInstance("EC", provider);
+		}
 		keyGenerator.initialize(spec);
 		return keyGenerator.generateKeyPair();
 	}
@@ -184,7 +198,7 @@ public class ECDSARoundTripTest extends TestCase {
 		throws Exception {
 
 		// Create the public and private keys
-		KeyPair keyPair = createECKeyPair(EC256KSPEC);
+		KeyPair keyPair = createECKeyPair(EC256KSPEC, BouncyCastleProviderSingleton.getInstance());
 		ECPublicKey publicKey = (ECPublicKey) keyPair.getPublic();
 		ECPrivateKey privateKey = (ECPrivateKey) keyPair.getPrivate();
 
@@ -193,6 +207,7 @@ public class ECDSARoundTripTest extends TestCase {
 
 		// Initialise signer
 		JWSSigner signer = new ECDSASigner(privateKey);
+		signer.getJCAContext().setProvider(BouncyCastleProviderSingleton.getInstance());
 
 		jwsObject.sign(signer);
 
@@ -200,6 +215,7 @@ public class ECDSARoundTripTest extends TestCase {
 
 		// Initialise verifier
 		JWSVerifier verifier = new ECDSAVerifier(publicKey);
+		verifier.getJCAContext().setProvider(BouncyCastleProviderSingleton.getInstance());
 
 		boolean verified = jwsObject.verify(verifier);
 
@@ -388,6 +404,7 @@ public class ECDSARoundTripTest extends TestCase {
 		ECKey ecJWK = new ECKeyGenerator(Curve.SECP256K1)
 			.keyUse(KeyUse.SIGNATURE)
 			.keyID("123")
+			.provider(BouncyCastleProviderSingleton.getInstance())
 			.generate();
 		
 		ECKey ecPublicJWK = ecJWK.toPublicJWK();
@@ -402,7 +419,9 @@ public class ECDSARoundTripTest extends TestCase {
 				.build(),
 			claimsSet);
 		
-		jwt.sign(new ECDSASigner(ecJWK));
+		JWSSigner signer = new ECDSASigner(ecJWK);
+		signer.getJCAContext().setProvider(BouncyCastleProviderSingleton.getInstance());
+		jwt.sign(signer);
 		
 		String out = jwt.serialize();
 		
@@ -410,7 +429,9 @@ public class ECDSARoundTripTest extends TestCase {
 		
 		jwt = SignedJWT.parse(out);
 		
-		assertTrue(jwt.verify(new ECDSAVerifier(ecPublicJWK)));
+		JWSVerifier verifier = new ECDSAVerifier(ecPublicJWK);
+		verifier.getJCAContext().setProvider(BouncyCastleProviderSingleton.getInstance());
+		assertTrue(jwt.verify(verifier));
 		
 		assertEquals("alice", jwt.getJWTClaimsSet().getSubject());
 	}

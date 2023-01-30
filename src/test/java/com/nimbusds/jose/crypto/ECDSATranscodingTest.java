@@ -20,6 +20,7 @@ package com.nimbusds.jose.crypto;
 
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
+import java.security.Provider;
 import java.security.Signature;
 import java.text.ParseException;
 import java.util.Arrays;
@@ -28,6 +29,7 @@ import junit.framework.TestCase;
 import org.junit.Assert;
 
 import com.nimbusds.jose.*;
+import com.nimbusds.jose.crypto.bc.BouncyCastleProviderSingleton;
 import com.nimbusds.jose.crypto.impl.ECDSA;
 import com.nimbusds.jose.jwk.Curve;
 import com.nimbusds.jose.jwk.ECKey;
@@ -40,7 +42,7 @@ import com.nimbusds.jose.util.StandardCharset;
 
 /**
  * @author Vladimir Dzhuvinov
- * @version 2022-04-27
+ * @version 2023-01-29
  */
 public class ECDSATranscodingTest extends TestCase {
 	
@@ -50,13 +52,18 @@ public class ECDSATranscodingTest extends TestCase {
 		
 		for (JWSAlgorithm alg: JWSAlgorithm.Family.EC) {
 			
+			Provider provider = JWSAlgorithm.ES256K.equals(alg) ? BouncyCastleProviderSingleton.getInstance() : null;
+			
 			ECKey ecJWK = new ECKeyGenerator(Curve.forJWSAlgorithm(alg).iterator().next())
 				.algorithm(alg)
+				.provider(provider)
 				.generate();
 			
 			JWSObject jwsObject = new JWSObject(new JWSHeader(alg), new Payload("Elliptic cure"));
 			
-			jwsObject.sign(new ECDSASigner(ecJWK));
+			ECDSASigner signer = new ECDSASigner(ecJWK);
+			signer.getJCAContext().setProvider(provider);
+			jwsObject.sign(signer);
 			
 			String string = jwsObject.serialize();
 			
@@ -75,7 +82,9 @@ public class ECDSATranscodingTest extends TestCase {
 			
 			JWSObject modifiedJWSObject = JWSObject.parse(modifiedString);
 			
-			assertFalse("Signature rejected", modifiedJWSObject.verify(new ECDSAVerifier(ecJWK.toECPublicKey())));
+			ECDSAVerifier verifier = new ECDSAVerifier(ecJWK.toECPublicKey());
+			verifier.getJCAContext().setProvider(provider);
+			assertFalse("Signature rejected", modifiedJWSObject.verify(verifier));
 		}
 	}
 	

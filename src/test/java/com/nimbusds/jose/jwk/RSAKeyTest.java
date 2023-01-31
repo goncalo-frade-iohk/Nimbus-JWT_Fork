@@ -27,15 +27,12 @@ import java.security.cert.X509Certificate;
 import java.security.interfaces.RSAPrivateCrtKey;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
-import java.security.spec.InvalidKeySpecException;
 import java.security.spec.RSAPrivateKeySpec;
-import java.security.spec.RSAPublicKeySpec;
 import java.text.ParseException;
 import java.util.*;
 
 import static org.junit.Assert.assertNotEquals;
 
-import com.nimbusds.jose.crypto.RSASSASigner;
 import junit.framework.TestCase;
 import org.bouncycastle.asn1.x500.X500Name;
 import org.bouncycastle.asn1.x509.Extension;
@@ -56,7 +53,7 @@ import com.nimbusds.jwt.util.DateUtils;
  * Tests the RSA JWK class.
  *
  * @author Vladimir Dzhuvinov
- * @version 2022-12-26
+ * @version 2023-01-31
  */
 public class RSAKeyTest extends TestCase {
 
@@ -1776,18 +1773,18 @@ public class RSAKeyTest extends TestCase {
 		}
 	}
 
-	public void testRsaSignerCreateWithRSAPSSAlgorithm() throws JOSEException, NoSuchAlgorithmException, InvalidKeySpecException {
-		List<KeyPair> keyPairs = PEMEncodedKeyParser.parseKeys(SamplePEMEncodedObjects.RSA_PSS_PRIVATE_KEY_PEM);
-		for (KeyPair keyPair : keyPairs) {
-			assertNotNull(keyPair.getPrivate());
-			RSASSASigner signer = new RSASSASigner(keyPair.getPrivate());
-			assertNotNull(signer);
-			RSAPrivateCrtKey crtKey = (RSAPrivateCrtKey) keyPair.getPrivate();
-			RSAPublicKeySpec pubSpec = new RSAPublicKeySpec(crtKey.getModulus(), crtKey.getPublicExponent());
-			RSAKey rsaKey = new RSAKey.Builder((RSAPublicKey) KeyFactory.getInstance("RSA").generatePublic(pubSpec)).privateKey(keyPair.getPrivate()).build();
-			assertNotNull(rsaKey);
-			assertEquals(signer.getPrivateKey(), keyPair.getPrivate());
-			assertTrue(rsaKey.isPrivate());
+	
+	// Make available to RSASSATest
+	public static final KeyPair RSA_PSS_2048_KEY_PAIR;
+	
+	static {
+		try {
+			List<KeyPair> keyPairs = PEMEncodedKeyParser.parseKeys(SamplePEMEncodedObjects.RSA_PSS_PRIVATE_KEY_PEM);
+			assertEquals(1, keyPairs.size());
+			RSA_PSS_2048_KEY_PAIR = keyPairs.get(0);
+			assertEquals("RSASSA-PSS", RSA_PSS_2048_KEY_PAIR.getPrivate().getAlgorithm());
+		} catch (JOSEException ex) {
+			throw new RuntimeException(e);
 		}
 	}
 }

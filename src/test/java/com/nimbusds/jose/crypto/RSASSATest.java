@@ -19,19 +19,18 @@ package com.nimbusds.jose.crypto;
 
 
 import java.math.BigInteger;
-import java.security.KeyFactory;
-import java.security.KeyPair;
-import java.security.KeyPairGenerator;
-import java.security.PrivateKey;
+import java.security.*;
+import java.security.interfaces.RSAPrivateCrtKey;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
+import java.security.spec.InvalidKeySpecException;
 import java.security.spec.RSAPrivateKeySpec;
 import java.security.spec.RSAPublicKeySpec;
+import java.text.ParseException;
 import java.util.*;
 
 import static org.junit.Assert.*;
 
-import com.nimbusds.jwt.JWTClaimNames;
 import org.junit.Test;
 
 import com.nimbusds.jose.*;
@@ -39,8 +38,10 @@ import com.nimbusds.jose.crypto.bc.BouncyCastleFIPSProviderSingleton;
 import com.nimbusds.jose.crypto.bc.BouncyCastleProviderSingleton;
 import com.nimbusds.jose.crypto.opts.UserAuthenticationRequired;
 import com.nimbusds.jose.jwk.RSAKey;
+import com.nimbusds.jose.jwk.RSAKeyTest;
 import com.nimbusds.jose.jwk.gen.RSAKeyGenerator;
 import com.nimbusds.jose.util.Base64URL;
+import com.nimbusds.jwt.JWTClaimNames;
 import com.nimbusds.jwt.util.DateUtils;
 
 
@@ -49,7 +50,7 @@ import com.nimbusds.jwt.util.DateUtils;
  * from the JWS spec.
  *
  * @author Vladimir Dzhuvinov
- * @version 2022-01-24
+ * @version 2022-01-31
  */
 public class RSASSATest {
 
@@ -981,5 +982,25 @@ public class RSASSATest {
 		JWSObject parsedJWSObject = JWSObject.parse(jwsString);
 		
 		assertTrue(parsedJWSObject.verify(jwsVerifier));
+	}
+	
+	
+	@Test
+	public void testWithRSAPrivateKeyForPSS() throws JOSEException, NoSuchAlgorithmException, InvalidKeySpecException, ParseException {
+		
+		RSAPrivateKey privateKey = (RSAPrivateKey) RSAKeyTest.RSA_PSS_2048_KEY_PAIR.getPrivate();
+		assertEquals("RSASSA-PSS", privateKey.getAlgorithm());
+		RSASSASigner signer = new RSASSASigner(privateKey);
+		
+		RSAPrivateCrtKey crtKey = (RSAPrivateCrtKey) privateKey;
+		RSAPublicKeySpec pubSpec = new RSAPublicKeySpec(crtKey.getModulus(), crtKey.getPublicExponent());
+		RSAPublicKey publicKey = (RSAPublicKey) KeyFactory.getInstance("RSA").generatePublic(pubSpec);
+		RSASSAVerifier verifier = new RSASSAVerifier(publicKey);
+		
+		JWSObject jwsObject = new JWSObject(new JWSHeader(JWSAlgorithm.PS256), new Payload("Hello, world!"));
+		jwsObject.sign(signer);
+		assertEquals(JWSObject.State.SIGNED, jwsObject.getState());
+		
+		assertTrue(JWSObject.parse(jwsObject.serialize()).verify(verifier));
 	}
 }

@@ -83,7 +83,7 @@ import com.nimbusds.jose.util.Base64URL;
  * 
  * @author Vladimir Dzhuvinov
  * @author Omer Levi Hevroni
- * @version 2020-12-27
+ * @version 2023-01-31
  */
 @ThreadSafe
 public class RSASSASigner extends RSASSAProvider implements JWSSigner {
@@ -159,7 +159,8 @@ public class RSASSASigner extends RSASSAProvider implements JWSSigner {
 	public RSASSASigner(final PrivateKey privateKey, final Set<JWSSignerOption> opts) {
 		
 		if (privateKey instanceof RSAPrivateKey || "RSA".equalsIgnoreCase(privateKey.getAlgorithm())) {
-		    this.privateKey = privateKey;
+			// Will also allow "RSASSA-PSS" alg RSAPrivateKey instances with MGF1ParameterSpec
+		    	this.privateKey = privateKey;
 		} else {
 			throw new IllegalArgumentException("The private key algorithm must be RSA");
 		} 

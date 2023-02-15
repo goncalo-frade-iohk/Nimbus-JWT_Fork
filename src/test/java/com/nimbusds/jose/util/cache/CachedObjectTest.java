@@ -63,4 +63,11 @@ public class CachedObjectTest {
 		
 		assertEquals(1500L, CachedObject.computeExpirationTime(1000L, 500L));
 	}
+	
+	
+	@Test
+	public void testComputeExpiration_preventWrapAround() {
+		
+		assertEquals(Long.MAX_VALUE, CachedObject.computeExpirationTime(1000L, Long.MAX_VALUE));
+	}
 }

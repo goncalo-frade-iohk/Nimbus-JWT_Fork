@@ -26,7 +26,7 @@ import net.jcip.annotations.Immutable;
  *
  * @param <V> The object type.
  *
- * @version 2022-04-08
+ * @version 2023-02-15
  */
 @Immutable
 public final class CachedObject<V> {
@@ -47,7 +47,15 @@ public final class CachedObject<V> {
 	 * @return The expiration time, in milliseconds since the Unix epoch.
 	 */
 	public static long computeExpirationTime(final long currentTime, final long timeToLive) {
-		return currentTime + timeToLive;
+		
+		long expirationTime = currentTime + timeToLive;
+		
+		if (expirationTime < 0L) {
+			// We have wrap around, return MAX value
+			return Long.MAX_VALUE;
+		}
+		
+		return expirationTime;
 	}
 	
 	

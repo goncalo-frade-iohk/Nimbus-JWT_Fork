@@ -27,6 +27,18 @@ import junit.framework.TestCase;
  * Tests the date utilities.
  */
 public class DateUtilsTest extends TestCase {
+	
+	
+	public void testNowWithSecondsPrecision() {
+		
+		Date regularNow = new Date();
+		
+		for (int i=0; i < 100; i++) {
+			Date now = DateUtils.nowWithSecondsPrecision();
+			assertTrue((now.getTime() + "").endsWith("000"));
+			assertTrue(DateUtils.isWithin(now, regularNow, 1));
+		}
+	}
 
 
 	public void testToSeconds() {

@@ -54,17 +54,17 @@ The library handles the following JOSE algorithms:
 * JWE Compression with DEFLATE.
 
 
-## Supported IETF standards and drafts
+## Supported specifications
 
 * RFC 7515 - JSON Web Signature (JWS)
 * RFC 7516 - JSON Web Encryption (JWE)
 * RFC 7517 - JSON Web Key (JWK)
 * RFC 7518 - JSON Web Algorithms (JWA)
 * RFC 7519 - JSON Web Token (JWT)
-* RFC 7520 - Examples of Protecting Content Using JSON Object Signing and
-  Encryption (JOSE)
 * RFC 7165 - Use Cases and Requirements for JSON Object Signing and Encryption
   (JOSE)
+* RFC 7520 - Examples of Protecting Content Using JSON Object Signing and
+  Encryption (JOSE)
 * RFC 7638 - JSON Web Key (JWK) Thumbprint
 * RFC 7797 - JSON Web Signature (JWS) Unencoded Payload Option
 * RFC 8037 - CFRG Elliptic Curve Diffie-Hellman (ECDH) and Signatures in JSON 
@@ -72,25 +72,29 @@ The library handles the following JOSE algorithms:
 * RFC 8812 - CBOR Object Signing and Encryption (COSE) and JSON Object Signing  
   and Encryption (JOSE) Registrations for Web Authentication (WebAuthn) 
   Algorithms
-* draft-ietf-oauth-jwk-thumbprint-uri-01 - JSON Web Key (JWK) Thumbprint URI
+* RFC 9278 - JSON Web Key (JWK) Thumbprint URI
 * draft-madden-jose-ecdh-1pu-04 - Public Key Authenticated Encryption for JOSE: 
   ECDH-1PU
 * draft-amringer-jose-chacha-02 - Chacha derived AEAD algorithms in JSON Object 
   Signing and Encryption (JOSE) (note, support for XC20P only)
 * draft-irtf-cfrg-xchacha-03 - XChaCha: eXtended-nonce ChaCha and 
   AEAD_XChaCha20_Poly1305
+* OpenID Connect Federation 1.0 (JWK exp, nbf and iat parameters)
 
 
 ## System requirements and dependencies
 
 The Nimbus JOSE+JWT library requires Java 7+ and has minimal dependencies.
 
-* (optional) BouncyCastle as an alternative JCA provider. Must not be imported
-  together with the BouncyCastle FIPS provider!
+* JCIP for concurrency annotations
+* (shaded) GSon for parsing and serialisation of JSON
+* (optional) BouncyCastle as an alternative JCA provider and for selected key
+  and certificate utilities. Must not be imported together with the 
+  BouncyCastle FIPS provider!
 * (optional) BouncyCastle FIPS as a FIPS 140-2, Level 1 compliant JCA provider.
   Must not be imported together with the plain BouncyCastle provider!
-* (optional) Tink for EdDSA with Ed25519, ECDH with X25519 and content 
-  encryption with XC20P.
+* (optional) Tink for OKP generation, EdDSA with Ed25519, ECDH with X25519 and 
+  content encryption with XC20P.
 
 
 For Maven add:

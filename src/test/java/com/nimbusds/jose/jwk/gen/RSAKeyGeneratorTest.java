@@ -20,6 +20,7 @@ package com.nimbusds.jose.jwk.gen;
 
 import java.security.SecureRandom;
 import java.util.Collections;
+import java.util.Date;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -28,14 +29,21 @@ import junit.framework.TestCase;
 
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
+import com.nimbusds.jose.crypto.bc.BouncyCastleProviderSingleton;
 import com.nimbusds.jose.jwk.KeyOperation;
 import com.nimbusds.jose.jwk.KeyUse;
 import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.jwk.ThumbprintUtils;
 import com.nimbusds.jose.util.Base64URL;
+import com.nimbusds.jwt.util.DateUtils;
 
 
 public class RSAKeyGeneratorTest extends TestCase {
+	
+	
+	private static final Date EXP = DateUtils.fromSecondsSinceEpoch(13_000_000L);
+	private static final Date NBF = DateUtils.fromSecondsSinceEpoch(12_000_000L);
+	private static final Date IAT = DateUtils.fromSecondsSinceEpoch(11_000_000L);
 	
 	
 	public void testMinKeySize() {
@@ -72,7 +80,21 @@ public class RSAKeyGeneratorTest extends TestCase {
 		assertNull(rsaJWK.getKeyOperations());
 		assertNull(rsaJWK.getAlgorithm());
 		assertNull(rsaJWK.getKeyID());
+		assertNull(rsaJWK.getExpirationTime());
+		assertNull(rsaJWK.getNotBeforeTime());
+		assertNull(rsaJWK.getIssueTime());
 		assertNull(rsaJWK.getKeyStore());
+	}
+	
+	
+	public void testWithBouncyCastleProvider()
+		throws JOSEException  {
+		
+		RSAKey rsaJWK = new RSAKeyGenerator(2048)
+			.provider(BouncyCastleProviderSingleton.getInstance())
+			.generate();
+		
+		assertEquals(2048, rsaJWK.size());
 	}
 	
 	
@@ -156,5 +178,20 @@ public class RSAKeyGeneratorTest extends TestCase {
 			assertTrue(values.add(k.getSecondFactorCRTExponent()));
 			assertTrue(values.add(k.getFirstCRTCoefficient()));
 		}
+	}
+	
+	
+	public void testGenWithTimestamps() throws JOSEException {
+		
+		RSAKey rsaJWK = new RSAKeyGenerator(2048)
+			.keyUse(KeyUse.SIGNATURE)
+			.expirationTime(EXP)
+			.notBeforeTime(NBF)
+			.issueTime(IAT)
+			.generate();
+		
+		assertEquals(EXP, rsaJWK.getExpirationTime());
+		assertEquals(NBF, rsaJWK.getNotBeforeTime());
+		assertEquals(IAT, rsaJWK.getIssueTime());
 	}
 }

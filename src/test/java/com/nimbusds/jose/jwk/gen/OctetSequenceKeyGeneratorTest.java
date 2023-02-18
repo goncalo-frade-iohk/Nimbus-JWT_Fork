@@ -19,20 +19,24 @@ package com.nimbusds.jose.jwk.gen;
 
 
 import java.security.SecureRandom;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWEAlgorithm;
 import com.nimbusds.jose.jwk.*;
 import com.nimbusds.jose.util.Base64URL;
+import com.nimbusds.jwt.util.DateUtils;
+
 import junit.framework.TestCase;
 
 
 public class OctetSequenceKeyGeneratorTest extends TestCase {
+	
+	
+	private static final Date EXP = DateUtils.fromSecondsSinceEpoch(13_000_000L);
+	private static final Date NBF = DateUtils.fromSecondsSinceEpoch(12_000_000L);
+	private static final Date IAT = DateUtils.fromSecondsSinceEpoch(11_000_000L);
 	
 	
 	public void testMinKeySize() {
@@ -74,6 +78,9 @@ public class OctetSequenceKeyGeneratorTest extends TestCase {
 		assertNull(octJWK.getKeyOperations());
 		assertNull(octJWK.getAlgorithm());
 		assertNull(octJWK.getKeyID());
+		assertNull(octJWK.getExpirationTime());
+		assertNull(octJWK.getNotBeforeTime());
+		assertNull(octJWK.getIssueTime());
 		assertNull(octJWK.getKeyStore());
 	}
 	

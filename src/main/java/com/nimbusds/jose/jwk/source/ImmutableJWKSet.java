@@ -20,18 +20,20 @@ package com.nimbusds.jose.jwk.source;
 
 import java.util.List;
 
+import net.jcip.annotations.Immutable;
+
 import com.nimbusds.jose.jwk.JWK;
 import com.nimbusds.jose.jwk.JWKSelector;
 import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.proc.SecurityContext;
-import net.jcip.annotations.Immutable;
 
 
 /**
  * JSON Web Key (JWK) source backed by an immutable JWK set.
  *
  * @author Vladimir Dzhuvinov
- * @version 2016-04-10
+ * @author Thomas Rørvik Skjølberg
+ * @version 2022-08-24
  */
 @Immutable
 public class ImmutableJWKSet<C extends SecurityContext> implements JWKSource<C> {

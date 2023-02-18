@@ -1487,3 +1487,51 @@ version 9.25.5 (2022-10-11)
 version 9.25.6 (2022-10-13)
     * Addresses incomplete #496 fix to remove module-info.class for the shaded
       com.google.gson package (iss #497).
+
+version 9.26 (2022-12-26)
+    * JWK adds support for exp, nbf and exp parameters as specified in OpenID
+      Connect Federation 1.0.
+    * Adds copy OctetSequenceKey.Builder.
+    * Updates GSon to 2.10.
+
+version 9.27 (2023-01-02)
+    * JWKGenerator classes add support for exp, nbf and exp time attributes as
+      specified in OpenID Connect Federation 1.0.
+
+version 9.28 (2023-01-05)
+    * New JWKSourceBuilder entry point for building JWKSource instances that
+      wrap a generic JWKSetSource with caching (including refresh ahead), rate
+      limiting, retrial, fail-over, health status reporting and outage
+      tolerance capabilities.
+    * New CachingJWKSetSource, RefreshAheadCachingJWKSetSource,
+      RateLimitedJWKSetSource, RetryingJWKSetSource, JWKSourceWithFailover,
+      JWKSetSourceWithHealthStatusReporting and
+      OutageTolerantJWKSetSource classes wrapping a generic JWKSetSource with a
+      capability.
+    * Deprecates the JWKSetCache interface and its DefaultJWKSetCache
+      implementation.
+    * Deprecates the RemoteJWKSet class.
+    * Deprecates the JWKSetWithTimestamp class.
+    * DefaultResourceRetriever adds support for file based URLs.
+    * New JWKSet isEmpty and size shorthand methods.
+    * New com.nimbusds.jose.util.cache package with generic CachedObject class.
+    * New com.nimbusds.jose.util.events package with Event and EventListener
+      interfaces.
+    * New com.nimbusds.jose.util.health package with HealthReportListener
+      interface, HealthReport class and HealthStatus enum.
+    * New IOUtils.closeSilently(java.io.Closeable) method.
+
+version 9.29 (2023-01-20)
+    * Adds static DateUtils.nowWithSecondsPrecision method.
+
+version 9.30 (2023-01-29)
+    * Adds ECKeyGenerator and RSAKeyGenerator provider(java.security.Provider)
+      method to set an explicit JCA provider.
+
+version 9.30.1 (2023-01-31)
+    * Updates the RSASSASigner constructor to allow RSAPrivateKey instances
+      with the "RSASSA-PSS" algorithm (iss #506).
+
+version 9.30.2 (2023-02-15)
+    * CachedObject.computeExpirationTime must return Long.MAX_VALUE when the
+      sum of the current time and TTL wraps around (iss #510).

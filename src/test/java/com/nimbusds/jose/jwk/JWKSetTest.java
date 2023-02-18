@@ -1177,4 +1177,18 @@ public class JWKSetTest extends TestCase {
 			assertTrue(jwk.isPrivate());
 		}
 	}
+	
+	
+	public void testEqualityAndHashCode() throws JOSEException, ParseException {
+		
+		RSAKey rsaJWK = new RSAKeyGenerator(2048).generate();
+		OctetSequenceKey secret = new OctetSequenceKeyGenerator(256).generate();
+		
+		JWKSet jwkSet = new JWKSet(Arrays.asList(rsaJWK, secret));
+		
+		String json = jwkSet.toString(false);
+		
+		assertEquals(jwkSet, JWKSet.parse(json));
+		assertEquals(jwkSet.hashCode(), JWKSet.parse(json).hashCode());
+	}
 }

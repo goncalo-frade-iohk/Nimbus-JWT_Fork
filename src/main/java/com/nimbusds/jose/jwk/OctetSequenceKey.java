@@ -21,11 +21,7 @@ package com.nimbusds.jose.jwk;
 import java.net.URI;
 import java.security.*;
 import java.text.ParseException;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 
@@ -33,6 +29,7 @@ import net.jcip.annotations.Immutable;
 
 import com.nimbusds.jose.Algorithm;
 import com.nimbusds.jose.JOSEException;
+import com.nimbusds.jose.util.Base64;
 import com.nimbusds.jose.util.*;
 
 
@@ -64,7 +61,7 @@ import com.nimbusds.jose.util.*;
  * 
  * @author Justin Richer
  * @author Vladimir Dzhuvinov
- * @version 2020-06-03
+ * @version 2022-12-26
  */
 @Immutable
 public final class OctetSequenceKey extends JWK implements SecretJWK {
@@ -150,6 +147,24 @@ public final class OctetSequenceKey extends JWK implements SecretJWK {
 		
 		
 		/**
+		 * The key expiration time, optional.
+		 */
+		private Date exp;
+		
+		
+		/**
+		 * The key not-before time, optional.
+		 */
+		private Date nbf;
+		
+		
+		/**
+		 * The key issued-at time, optional.
+		 */
+		private Date iat;
+		
+		
+		/**
 		 * Reference to the underlying key store, {@code null} if none.
 		 */
 		private KeyStore ks;
@@ -197,6 +212,30 @@ public final class OctetSequenceKey extends JWK implements SecretJWK {
 		public Builder(final SecretKey secretKey) {
 
 			this(secretKey.getEncoded());
+		}
+		
+		
+		/**
+		 * Creates a new octet sequence JWK builder.
+		 *
+		 * @param octJWK The octet sequence JWK to start with. Must not
+		 *               be {@code null}.
+		 */
+		public Builder(final OctetSequenceKey octJWK) {
+			
+			k = octJWK.k;
+			use = octJWK.getKeyUse();
+			ops = octJWK.getKeyOperations();
+			alg = octJWK.getAlgorithm();
+			kid = octJWK.getKeyID();
+			x5u = octJWK.getX509CertURL();
+			x5t = octJWK.getX509CertThumbprint();
+			x5t256 = octJWK.getX509CertSHA256Thumbprint();
+			x5c = octJWK.getX509CertChain();
+			exp = octJWK.getExpirationTime();
+			nbf = octJWK.getNotBeforeTime();
+			iat = octJWK.getIssueTime();
+			ks = octJWK.getKeyStore();
 		}
 
 
@@ -375,6 +414,51 @@ public final class OctetSequenceKey extends JWK implements SecretJWK {
 		
 		
 		/**
+		 * Sets the expiration time ({@code exp}) of the JWK.
+		 *
+		 * @param exp The expiration time, {@code null} if not
+		 *            specified.
+		 *
+		 * @return This builder.
+		 */
+		public Builder expirationTime(final Date exp) {
+			
+			this.exp = exp;
+			return this;
+		}
+		
+		
+		/**
+		 * Sets the not-before time ({@code nbf}) of the JWK.
+		 *
+		 * @param nbf The not-before time, {@code null} if not
+		 *            specified.
+		 *
+		 * @return This builder.
+		 */
+		public Builder notBeforeTime(final Date nbf) {
+			
+			this.nbf = nbf;
+			return this;
+		}
+		
+		
+		/**
+		 * Sets the issued-at time ({@code iat}) of the JWK.
+		 *
+		 * @param iat The issued-at time, {@code null} if not
+		 *            specified.
+		 *
+		 * @return This builder.
+		 */
+		public Builder issueTime(final Date iat) {
+			
+			this.iat = iat;
+			return this;
+		}
+		
+		
+		/**
 		 * Sets the underlying key store.
 		 *
 		 * @param keyStore Reference to the underlying key store,
@@ -400,7 +484,7 @@ public final class OctetSequenceKey extends JWK implements SecretJWK {
 		public OctetSequenceKey build() {
 
 			try {
-				return new OctetSequenceKey(k, use, ops, alg, kid, x5u, x5t, x5t256, x5c, ks);
+				return new OctetSequenceKey(k, use, ops, alg, kid, x5u, x5t, x5t256, x5c, exp, nbf, iat, ks);
 
 			} catch (IllegalArgumentException e) {
 
@@ -433,12 +517,51 @@ public final class OctetSequenceKey extends JWK implements SecretJWK {
 	 * @param ks     Reference to the underlying key store, {@code null} if
 	 *               not specified.
 	 */
+	@Deprecated
 	public OctetSequenceKey(final Base64URL k,
 				final KeyUse use, final Set<KeyOperation> ops, final Algorithm alg, final String kid,
 		                final URI x5u, final Base64URL x5t, final Base64URL x5t256, final List<Base64> x5c,
 				final KeyStore ks) {
 	
-		super(KeyType.OCT, use, ops, alg, kid, x5u, x5t, x5t256, x5c, ks);
+		this(k, use, ops, alg, kid, x5u, x5t, x5t256, x5c, null, null, null, ks);
+	}
+
+	
+	/**
+	 * Creates a new octet sequence JSON Web Key (JWK) with the specified
+	 * parameters.
+	 *
+	 * @param k      The key value. It is represented as the Base64URL
+	 *               encoding of the value's big endian representation.
+	 *               Must not be {@code null}.
+	 * @param use    The key use, {@code null} if not specified or if the
+	 *               key is intended for signing as well as encryption.
+	 * @param ops    The key operations, {@code null} if not specified.
+	 * @param alg    The intended JOSE algorithm for the key, {@code null}
+	 *               if not specified.
+	 * @param kid    The key ID. {@code null} if not specified.
+	 * @param x5u    The X.509 certificate URL, {@code null} if not specified.
+	 * @param x5t    The X.509 certificate SHA-1 thumbprint, {@code null}
+	 *               if not specified.
+	 * @param x5t256 The X.509 certificate SHA-256 thumbprint, {@code null}
+	 *               if not specified.
+	 * @param x5c    The X.509 certificate chain, {@code null} if not
+	 *               specified.
+	 * @param exp    The key expiration time, {@code null} if not
+	 *               specified.
+	 * @param nbf    The key not-before time, {@code null} if not
+	 *               specified.
+	 * @param iat    The key issued-at time, {@code null} if not specified.
+	 * @param ks     Reference to the underlying key store, {@code null} if
+	 *               not specified.
+	 */
+	public OctetSequenceKey(final Base64URL k,
+				final KeyUse use, final Set<KeyOperation> ops, final Algorithm alg, final String kid,
+		                final URI x5u, final Base64URL x5t, final Base64URL x5t256, final List<Base64> x5c,
+				final Date exp, final Date nbf, final Date iat,
+				final KeyStore ks) {
+	
+		super(KeyType.OCT, use, ops, alg, kid, x5u, x5t, x5t256, x5c, exp, nbf, iat, ks);
 
 		if (k == null) {
 			throw new IllegalArgumentException("The key value must not be null");
@@ -609,6 +732,9 @@ public final class OctetSequenceKey extends JWK implements SecretJWK {
 				JWKMetadata.parseX509CertThumbprint(jsonObject),
 				JWKMetadata.parseX509CertSHA256Thumbprint(jsonObject),
 				JWKMetadata.parseX509CertChain(jsonObject),
+				JWKMetadata.parseExpirationTime(jsonObject),
+				JWKMetadata.parseNotBeforeTime(jsonObject),
+				JWKMetadata.parseIssueTime(jsonObject),
 				null // key store
 			);
 		} catch (IllegalArgumentException e) {

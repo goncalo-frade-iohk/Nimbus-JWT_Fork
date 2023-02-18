@@ -19,7 +19,9 @@ package com.nimbusds.jose.jwk.gen;
 
 
 import java.security.KeyStore;
+import java.security.Provider;
 import java.security.SecureRandom;
+import java.util.Date;
 import java.util.Set;
 
 import com.nimbusds.jose.Algorithm;
@@ -35,7 +37,7 @@ import com.nimbusds.jose.jwk.KeyUse;
  *
  * @author Vladimir Dzhuvinov
  * @author Justin Cranford
- * @version 2022-09-13
+ * @version 2023-01-29
  */
 public abstract class JWKGenerator<T extends JWK> {
 	
@@ -71,10 +73,34 @@ public abstract class JWKGenerator<T extends JWK> {
 	protected boolean x5tKid;
 	
 	
+	 /**
+	 * The key expiration time, optional.
+	 */
+	protected Date exp;
+	
+	
+	/**
+	 * The key not-before time, optional.
+	 */
+	protected Date nbf;
+	
+	
+	/**
+	 * The key issued-at time, optional.
+	 */
+	protected Date iat;
+	
+	
 	/**
 	 * Reference to the underlying key store, {@code null} if none.
 	 */
 	protected KeyStore keyStore;
+	
+	
+	/**
+	 * The JCA provider, {@code null} to use the default one.
+	 */
+	protected Provider provider;
 
 
 	/**
@@ -94,7 +120,6 @@ public abstract class JWKGenerator<T extends JWK> {
 	 * @return This generator.
 	 */
 	public JWKGenerator<T> keyUse(final KeyUse use) {
-		
 		this.use = use;
 		return this;
 	}
@@ -109,7 +134,6 @@ public abstract class JWKGenerator<T extends JWK> {
 	 * @return This generator.
 	 */
 	public JWKGenerator<T> keyOperations(final Set<KeyOperation> ops) {
-		
 		this.ops = ops;
 		return this;
 	}
@@ -124,7 +148,6 @@ public abstract class JWKGenerator<T extends JWK> {
 	 * @return This generator.
 	 */
 	public JWKGenerator<T> algorithm(final Algorithm alg) {
-		
 		this.alg = alg;
 		return this;
 	}
@@ -141,7 +164,6 @@ public abstract class JWKGenerator<T extends JWK> {
 	 * @return This generator.
 	 */
 	public JWKGenerator<T> keyID(final String kid) {
-		
 		this.kid = kid;
 		return this;
 	}
@@ -161,14 +183,57 @@ public abstract class JWKGenerator<T extends JWK> {
 	 * @return This generator.
 	 */
 	public JWKGenerator<T> keyIDFromThumbprint(final boolean x5tKid) {
-		
 		this.x5tKid = x5tKid;
 		return this;
 	}
 	
 	
 	/**
-	 * Sets the underlying key store.
+	 * Sets the expiration time ({@code exp}) of the JWK.
+	 *
+	 * @param exp The expiration time, {@code null} if not
+	 *            specified.
+	 *
+	 * @return This generator.
+	 */
+	public JWKGenerator<T> expirationTime(final Date exp) {
+		this.exp = exp;
+		return this;
+	}
+	
+	
+	/**
+	 * Sets the not-before time ({@code nbf}) of the JWK.
+	 *
+	 * @param nbf The not-before time, {@code null} if not
+	 *            specified.
+	 *
+	 * @return This generator.
+	 */
+	public JWKGenerator<T> notBeforeTime(final Date nbf) {
+		this.nbf = nbf;
+		return this;
+	}
+	
+	
+	/**
+	 * Sets the issued-at time ({@code iat}) of the JWK.
+	 *
+	 * @param iat The issued-at time, {@code null} if not
+	 *            specified.
+	 *
+	 * @return This generator.
+	 */
+	public JWKGenerator<T> issueTime(final Date iat) {
+		this.iat = iat;
+		return this;
+	}
+	
+	
+	/**
+	 * Sets the underlying key store. Overrides the {@link #provider JCA
+	 * provider} is set. Note, some JWK generators may not use the JCA key
+	 * store API.
 	 *
 	 * @param keyStore Reference to the underlying key store,
 	 *                 {@code null} if none.
@@ -176,8 +241,37 @@ public abstract class JWKGenerator<T extends JWK> {
 	 * @return This generator.
 	 */
 	public JWKGenerator<T> keyStore(final KeyStore keyStore) {
-		
 		this.keyStore = keyStore;
+		return this;
+	}
+	
+	
+	/**
+	 * Sets the JCA provider for the key generation. Note, some JWK
+	 * generators may not use the JCA provider API.
+	 *
+	 * @param provider The JCA provider, {@code null} to use the default
+	 *                 one.
+	 *
+	 * @return This generator.
+	 */
+	public JWKGenerator<T> provider(final Provider provider) {
+		this.provider = provider;
+		return this;
+	}
+	
+	
+	/**
+	 * Sets the secure random generator to use. Note, some JWK generators
+	 * may not use the JCA secure random API.
+	 *
+	 * @param secureRandom The secure random generator to use, {@code null}
+	 *                     to use the default one.
+	 *
+	 * @return This generator.
+	 */
+	public JWKGenerator<T> secureRandom(final SecureRandom secureRandom) {
+		this.secureRandom = secureRandom;
 		return this;
 	}
 	
@@ -190,19 +284,4 @@ public abstract class JWKGenerator<T extends JWK> {
 	 * @throws JOSEException If the key generation failed.
 	 */
 	public abstract T generate() throws JOSEException;
-
-
-	/**
-	 * Sets the secure random generator to use.
-	 *
-	 * @param secureRandom The secure random generator to use, {@code null}
-	 *                     to use the default one.
-	 *
-	 * @return This generator.
-	 */
-	public JWKGenerator<T> secureRandom(final SecureRandom secureRandom) {
-
-		this.secureRandom = secureRandom;
-		return this;
-	}
 }

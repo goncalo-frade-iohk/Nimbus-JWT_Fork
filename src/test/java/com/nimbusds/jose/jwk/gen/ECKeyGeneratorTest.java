@@ -19,34 +19,60 @@ package com.nimbusds.jose.jwk.gen;
 
 
 import java.security.SecureRandom;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import junit.framework.TestCase;
 
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
+import com.nimbusds.jose.crypto.bc.BouncyCastleProviderSingleton;
 import com.nimbusds.jose.jwk.*;
 import com.nimbusds.jose.util.Base64URL;
-import junit.framework.TestCase;
+import com.nimbusds.jwt.util.DateUtils;
 
 
 public class ECKeyGeneratorTest extends TestCase {
 	
 	
+	private static final Date EXP = DateUtils.fromSecondsSinceEpoch(13_000_000L);
+	private static final Date NBF = DateUtils.fromSecondsSinceEpoch(12_000_000L);
+	private static final Date IAT = DateUtils.fromSecondsSinceEpoch(11_000_000L);
+	
+	
 	public void testGenMinimal()
 		throws JOSEException  {
 		
-		ECKey ecJWK = new ECKeyGenerator(Curve.P_256)
-			.generate();
+		for (Curve curve: Arrays.asList(Curve.P_256, Curve.P_384, Curve.P_521)) {
+			
+			ECKey ecJWK = new ECKeyGenerator(curve)
+				.generate();
+			
+			assertEquals(curve, ecJWK.getCurve());
+			
+			assertNull(ecJWK.getKeyUse());
+			assertNull(ecJWK.getKeyOperations());
+			assertNull(ecJWK.getAlgorithm());
+			assertNull(ecJWK.getKeyID());
+			assertNull(ecJWK.getExpirationTime());
+			assertNull(ecJWK.getNotBeforeTime());
+			assertNull(ecJWK.getIssueTime());
+			assertNull(ecJWK.getKeyStore());
+		}
+	}
+	
+	
+	public void testWithBouncyCastleProvider()
+		throws JOSEException  {
 		
-		assertEquals(Curve.P_256, ecJWK.getCurve());
-		
-		assertNull(ecJWK.getKeyUse());
-		assertNull(ecJWK.getKeyOperations());
-		assertNull(ecJWK.getAlgorithm());
-		assertNull(ecJWK.getKeyID());
-		assertNull(ecJWK.getKeyStore());
+		for (Curve curve: Arrays.asList(Curve.P_256, Curve.P_384, Curve.P_521, Curve.SECP256K1)) {
+			
+			ECKey ecJWK = new ECKeyGenerator(curve)
+				.provider(BouncyCastleProviderSingleton.getInstance())
+				.generate();
+			
+			assertEquals(curve, ecJWK.getCurve());
+		}
 	}
 	
 	
@@ -147,27 +173,42 @@ public class ECKeyGeneratorTest extends TestCase {
 		assertEquals(ThumbprintUtils.compute(ecJWK).toString(), ecJWK.getKeyID());
 		assertNull(ecJWK.getKeyStore());
 	}
+	
+	
+	public void testGenWithTimestamps() throws JOSEException {
+		
+		ECKey ecJWK = new ECKeyGenerator(Curve.P_256)
+			.keyUse(KeyUse.SIGNATURE)
+			.expirationTime(EXP)
+			.notBeforeTime(NBF)
+			.issueTime(IAT)
+			.generate();
+		
+		assertEquals(EXP, ecJWK.getExpirationTime());
+		assertEquals(NBF, ecJWK.getNotBeforeTime());
+		assertEquals(IAT, ecJWK.getIssueTime());
+	}
 
 
 	// Ed25519 and X25519 are not allowed in EC keys.
 	// See OctetKeyPair instead.
-	public void testGenInvalidCurves()
-		throws JOSEException  {
+	public void testGenInvalidCurves() {
 
 		try {
-			ECKey ecJWK = new ECKeyGenerator(Curve.Ed25519).generate();
+			new ECKeyGenerator(Curve.Ed25519).generate();
 			fail();
-
-		} catch (Exception e) {
+		} catch (JOSEException e) {
 			// Passed
+			assertEquals("ECParameterSpec or ECGenParameterSpec required for EC", e.getMessage());
 		}
 
 		try {
-			ECKey ecJWK = new ECKeyGenerator(Curve.X25519).generate();
+			new ECKeyGenerator(Curve.X25519).generate();
 			fail();
 
-		} catch (Exception e) {
+		} catch (JOSEException e) {
 			// Passed
+			assertEquals("ECParameterSpec or ECGenParameterSpec required for EC", e.getMessage());
 		}
 	}
 }

@@ -17,6 +17,7 @@
 
 package com.nimbusds.jose.jwk.gen;
 
+
 import java.security.GeneralSecurityException;
 import java.security.InvalidKeyException;
 import java.util.Collections;
@@ -25,6 +26,7 @@ import java.util.Set;
 
 import com.google.crypto.tink.subtle.Ed25519Sign;
 import com.google.crypto.tink.subtle.X25519;
+
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.jwk.Curve;
 import com.nimbusds.jose.jwk.OctetKeyPair;
@@ -42,7 +44,7 @@ import com.nimbusds.jose.util.Base64URL;
  * </ul>
  *
  * @author Tim McLean
- * @version 2018-07-18
+ * @version 2023-01-02
  */
 public class OctetKeyPairGenerator extends JWKGenerator<OctetKeyPair> {
 
@@ -138,7 +140,10 @@ public class OctetKeyPairGenerator extends JWKGenerator<OctetKeyPair> {
 			.d(privateKey)
 			.keyUse(use)
 			.keyOperations(ops)
-			.algorithm(alg);
+			.algorithm(alg)
+			.expirationTime(exp)
+			.notBeforeTime(nbf)
+			.issueTime(iat);
 
 		if (x5tKid) {
 			builder.keyIDFromThumbprint();

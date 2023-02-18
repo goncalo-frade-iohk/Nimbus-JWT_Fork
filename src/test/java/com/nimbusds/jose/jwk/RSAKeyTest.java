@@ -21,7 +21,6 @@ package com.nimbusds.jose.jwk;
 import java.io.File;
 import java.math.BigInteger;
 import java.net.URI;
-import java.nio.charset.StandardCharsets;
 import java.security.*;
 import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
@@ -47,13 +46,14 @@ import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.jwk.gen.RSAKeyGenerator;
 import com.nimbusds.jose.util.Base64;
 import com.nimbusds.jose.util.*;
+import com.nimbusds.jwt.util.DateUtils;
 
 
 /**
  * Tests the RSA JWK class.
  *
  * @author Vladimir Dzhuvinov
- * @version 2022-01-24
+ * @version 2023-01-31
  */
 public class RSAKeyTest extends TestCase {
 
@@ -110,7 +110,12 @@ public class RSAKeyTest extends TestCase {
 		"GyM_p6JrXySiz1toFgKbWV-JdI3jQ4ypu9rbMWx3rQJBfmt0FoYzg" +
 			"UIZEVFEcOqwemRN81zoDAaa-Bk0KWNGDjJHZDdDmFhW3AN7lI-puxk_mHZGJ11rx" +
 			"yR8O55XLSe3SPmRfKwZI6yU24ZxvQKFYItdldUKGzO6Ia6zTKhAVRU";
-
+	
+	
+	private static final Date EXP = DateUtils.fromSecondsSinceEpoch(13_000_000L);
+	private static final Date NBF = DateUtils.fromSecondsSinceEpoch(12_000_000L);
+	private static final Date IAT = DateUtils.fromSecondsSinceEpoch(11_000_000L);
+	
 
 	public void testConstructAndSerialize()
 		throws Exception {
@@ -133,6 +138,7 @@ public class RSAKeyTest extends TestCase {
 			privateKey,
 			KeyUse.SIGNATURE, null, JWSAlgorithm.RS256, "1",
 			x5u, x5t, x5t256, x5c,
+			EXP, NBF, IAT,
 			keyStore);
 
 		// Test getters
@@ -145,6 +151,9 @@ public class RSAKeyTest extends TestCase {
 		assertEquals(x5t256.toString(), key.getX509CertSHA256Thumbprint().toString());
 		assertNull(key.getX509CertChain());
 		assertNull(key.getParsedX509CertChain());
+		assertEquals(EXP, key.getExpirationTime());
+		assertEquals(NBF, key.getNotBeforeTime());
+		assertEquals(IAT, key.getIssueTime());
 		assertEquals(keyStore, key.getKeyStore());
 
 		assertEquals(new Base64URL(n), key.getModulus());
@@ -182,6 +191,9 @@ public class RSAKeyTest extends TestCase {
 		assertEquals(x5t256.toString(), key.getX509CertSHA256Thumbprint().toString());
 		assertNull(key.getX509CertChain());
 		assertNull(key.getParsedX509CertChain());
+		assertEquals(EXP, key.getExpirationTime());
+		assertEquals(NBF, key.getNotBeforeTime());
+		assertEquals(IAT, key.getIssueTime());
 
 		assertEquals(new Base64URL(n), key.getModulus());
 		assertEquals(new Base64URL(e), key.getPublicExponent());
@@ -208,6 +220,9 @@ public class RSAKeyTest extends TestCase {
 		assertNull(key.getKeyOperations());
 		assertEquals(JWSAlgorithm.RS256, key.getAlgorithm());
 		assertEquals("1", key.getKeyID());
+		assertEquals(EXP, key.getExpirationTime());
+		assertEquals(NBF, key.getNotBeforeTime());
+		assertEquals(IAT, key.getIssueTime());
 
 		assertEquals(new Base64URL(n), key.getModulus());
 		assertEquals(new Base64URL(e), key.getPublicExponent());
@@ -253,6 +268,9 @@ public class RSAKeyTest extends TestCase {
 		assertEquals(x5t256.toString(), key.getX509CertSHA256Thumbprint().toString());
 		assertNull(key.getX509CertChain());
 		assertNull(key.getParsedX509CertChain());
+		assertNull(key.getExpirationTime());
+		assertNull(key.getNotBeforeTime());
+		assertNull(key.getIssueTime());
 
 		assertEquals(new Base64URL(n), key.getModulus());
 		assertEquals(new Base64URL(e), key.getPublicExponent());
@@ -286,6 +304,9 @@ public class RSAKeyTest extends TestCase {
 		assertEquals(x5t256.toString(), key.getX509CertSHA256Thumbprint().toString());
 		assertNull(key.getX509CertChain());
 		assertNull(key.getParsedX509CertChain());
+		assertNull(key.getExpirationTime());
+		assertNull(key.getNotBeforeTime());
+		assertNull(key.getIssueTime());
 
 		assertEquals(new Base64URL(n), key.getModulus());
 		assertEquals(new Base64URL(e), key.getPublicExponent());
@@ -312,6 +333,9 @@ public class RSAKeyTest extends TestCase {
 		assertNull(key.getKeyOperations());
 		assertEquals(JWSAlgorithm.RS256, key.getAlgorithm());
 		assertEquals("1", key.getKeyID());
+		assertNull(key.getExpirationTime());
+		assertNull(key.getNotBeforeTime());
+		assertNull(key.getIssueTime());
 
 		assertEquals(new Base64URL(n), key.getModulus());
 		assertEquals(new Base64URL(e), key.getPublicExponent());
@@ -354,6 +378,9 @@ public class RSAKeyTest extends TestCase {
 			.x509CertThumbprint(x5t)
 			.x509CertSHA256Thumbprint(x5t256)
 			.x509CertChain(x5c)
+			.expirationTime(EXP)
+			.notBeforeTime(NBF)
+			.issueTime(IAT)
 			.build();
 
 		// Test getters
@@ -366,6 +393,9 @@ public class RSAKeyTest extends TestCase {
 		assertEquals(x5t256.toString(), key.getX509CertSHA256Thumbprint().toString());
 		assertNull(key.getX509CertChain());
 		assertNull(key.getParsedX509CertChain());
+		assertEquals(EXP, key.getExpirationTime());
+		assertEquals(NBF, key.getNotBeforeTime());
+		assertEquals(IAT, key.getIssueTime());
 		assertNull(key.getKeyStore());
 
 		assertEquals(new Base64URL(n), key.getModulus());
@@ -400,6 +430,9 @@ public class RSAKeyTest extends TestCase {
 		assertEquals(x5t256.toString(), key.getX509CertSHA256Thumbprint().toString());
 		assertNull(key.getX509CertChain());
 		assertNull(key.getParsedX509CertChain());
+		assertEquals(EXP, key.getExpirationTime());
+		assertEquals(NBF, key.getNotBeforeTime());
+		assertEquals(IAT, key.getIssueTime());
 
 		assertEquals(new Base64URL(n), key.getModulus());
 		assertEquals(new Base64URL(e), key.getPublicExponent());
@@ -448,6 +481,9 @@ public class RSAKeyTest extends TestCase {
 			.x509CertThumbprint(x5t)
 			.x509CertSHA256Thumbprint(x5t256)
 			.x509CertChain(x5c)
+			.expirationTime(EXP)
+			.notBeforeTime(NBF)
+			.issueTime(IAT)
 			.keyStore(keyStore)
 			.build();
 
@@ -463,6 +499,9 @@ public class RSAKeyTest extends TestCase {
 		assertEquals(x5t256.toString(), key.getX509CertSHA256Thumbprint().toString());
 		assertNull(key.getX509CertChain());
 		assertNull(key.getParsedX509CertChain());
+		assertEquals(EXP, key.getExpirationTime());
+		assertEquals(NBF, key.getNotBeforeTime());
+		assertEquals(IAT, key.getIssueTime());
 		assertEquals(keyStore, key.getKeyStore());
 		
 		assertEquals(publicKey.getModulus(), key.getModulus().decodeToBigInteger());
@@ -491,6 +530,9 @@ public class RSAKeyTest extends TestCase {
 		assertEquals(x5t256.toString(), key.getX509CertSHA256Thumbprint().toString());
 		assertNull(key.getX509CertChain());
 		assertNull(key.getParsedX509CertChain());
+		assertEquals(EXP, key.getExpirationTime());
+		assertEquals(NBF, key.getNotBeforeTime());
+		assertEquals(IAT, key.getIssueTime());
 		assertNull(key.getKeyStore());
 		
 		assertEquals(publicKey.getModulus(), key.getModulus().decodeToBigInteger());
@@ -528,6 +570,9 @@ public class RSAKeyTest extends TestCase {
 			.x509CertThumbprint(x5t)
 			.x509CertSHA256Thumbprint(x5t256)
 			.x509CertChain(x5c)
+			.expirationTime(EXP)
+			.notBeforeTime(NBF)
+			.issueTime(IAT)
 			.keyStore(keyStore)
 			.build();
 		
@@ -544,6 +589,9 @@ public class RSAKeyTest extends TestCase {
 		assertEquals(x5t256.toString(), key.getX509CertSHA256Thumbprint().toString());
 		assertNull(key.getX509CertChain());
 		assertNull(key.getParsedX509CertChain());
+		assertEquals(EXP, key.getExpirationTime());
+		assertEquals(NBF, key.getNotBeforeTime());
+		assertEquals(IAT, key.getIssueTime());
 		assertEquals(keyStore, key.getKeyStore());
 		
 		assertEquals(new Base64URL(n), key.getModulus());
@@ -571,7 +619,8 @@ public class RSAKeyTest extends TestCase {
 
 		RSAKey key = new RSAKey(new Base64URL(n), new Base64URL(e),
 			null, null, null, null,
-			null, null, null, null, null);
+			null, null, null, null,
+			null);
 
 		// Public key export
 		RSAPublicKey pubKey = key.toRSAPublicKey();
@@ -1310,6 +1359,9 @@ public class RSAKeyTest extends TestCase {
 		assertEquals(Base64URL.encode(sha256.digest(cert.getEncoded())), rsaKey.getX509CertSHA256Thumbprint());
 		assertNull(rsaKey.getAlgorithm());
 		assertNull(rsaKey.getKeyOperations());
+		assertEquals(DateUtils.toSecondsSinceEpoch(cert.getNotAfter()), DateUtils.toSecondsSinceEpoch(rsaKey.getExpirationTime()));
+		assertEquals(DateUtils.toSecondsSinceEpoch(cert.getNotBefore()), DateUtils.toSecondsSinceEpoch(rsaKey.getNotBeforeTime()));
+		assertNull(rsaKey.getIssueTime());
 	}
 	
 	
@@ -1456,6 +1508,9 @@ public class RSAKeyTest extends TestCase {
 		assertEquals(1, rsaKey.getX509CertChain().size());
 		assertNull(rsaKey.getX509CertThumbprint());
 		assertNotNull(rsaKey.getX509CertSHA256Thumbprint());
+		assertEquals(DateUtils.toSecondsSinceEpoch(exp), DateUtils.toSecondsSinceEpoch(rsaKey.getExpirationTime()));
+		assertEquals(DateUtils.toSecondsSinceEpoch(nbf), DateUtils.toSecondsSinceEpoch(rsaKey.getNotBeforeTime()));
+		assertNull(rsaKey.getIssueTime());
 		assertTrue(rsaKey.isPrivate());
 		assertEquals(keyStore, rsaKey.getKeyStore());
 		
@@ -1491,6 +1546,9 @@ public class RSAKeyTest extends TestCase {
 		assertEquals(1, rsaKey.getParsedX509CertChain().size());
 		assertNull(rsaKey.getX509CertThumbprint());
 		assertNotNull(rsaKey.getX509CertSHA256Thumbprint());
+		assertEquals(1512084859L, DateUtils.toSecondsSinceEpoch(rsaKey.getExpirationTime()));
+		assertEquals(1475331698L, DateUtils.toSecondsSinceEpoch(rsaKey.getNotBeforeTime()));
+		assertNull(rsaKey.getIssueTime());
 		assertFalse(rsaKey.isPrivate());
 		assertEquals(keyStore, rsaKey.getKeyStore());
 	}
@@ -1712,6 +1770,21 @@ public class RSAKeyTest extends TestCase {
 			fail();
 		} catch (ParseException e) {
 			assertEquals("The public exponent value must not be null", e.getMessage());
+		}
+	}
+
+	
+	// Make available to RSASSATest
+	public static final KeyPair RSA_PSS_2048_KEY_PAIR;
+	
+	static {
+		try {
+			List<KeyPair> keyPairs = PEMEncodedKeyParser.parseKeys(SamplePEMEncodedObjects.RSA_PSS_PRIVATE_KEY_PEM);
+			assertEquals(1, keyPairs.size());
+			RSA_PSS_2048_KEY_PAIR = keyPairs.get(0);
+			assertEquals("RSASSA-PSS", RSA_PSS_2048_KEY_PAIR.getPrivate().getAlgorithm());
+		} catch (JOSEException ex) {
+			throw new RuntimeException(e);
 		}
 	}
 }

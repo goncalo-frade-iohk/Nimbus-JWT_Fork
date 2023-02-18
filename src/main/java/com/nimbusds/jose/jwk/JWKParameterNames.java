@@ -2,6 +2,7 @@ package com.nimbusds.jose.jwk;
 
 
 import com.nimbusds.jose.HeaderParameterNames;
+import com.nimbusds.jwt.JWTClaimNames;
 
 
 /**
@@ -13,7 +14,7 @@ import com.nimbusds.jose.HeaderParameterNames;
  * parameters registry</a> administered by IANA.
  *
  * @author Nathaniel Hart
- * @version 2021-07-11
+ * @version 2022-02-26
  */
 public final class JWKParameterNames {
 	
@@ -76,6 +77,24 @@ public final class JWKParameterNames {
 	 * Parameter</a>
 	 */
 	public static final String X_509_CERT_SHA_256_THUMBPRINT = HeaderParameterNames.X_509_CERT_SHA_256_THUMBPRINT;
+	
+	
+	/**
+	 * @see <a href="https://openid.net/specs/openid-connect-federation-1_0.html#name-iana-considerations">OpenID Connect Federation 1.0</a>
+	 */
+	public static final String EXPIRATION_TIME = JWTClaimNames.EXPIRATION_TIME;
+	
+	
+	/**
+	 * @see <a href="https://openid.net/specs/openid-connect-federation-1_0.html#name-iana-considerations">OpenID Connect Federation 1.0</a>
+	 */
+	public static final String NOT_BEFORE = JWTClaimNames.NOT_BEFORE;
+	
+	
+	/**
+	 * @see <a href="https://openid.net/specs/openid-connect-federation-1_0.html#name-iana-considerations">OpenID Connect Federation 1.0</a>
+	 */
+	public static final String ISSUED_AT = JWTClaimNames.ISSUED_AT;
 	
 	
 	////////////////////////////////////////////////////////////////////////////////

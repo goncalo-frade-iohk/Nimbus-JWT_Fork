@@ -44,7 +44,7 @@ import com.nimbusds.jose.jwk.ECKey;
  *
  * @author Vladimir Dzhuvinov
  * @author Justin Cranford
- * @version 2022-09-13
+ * @version 2023-01-29
  */
 public class ECKeyGenerator extends JWKGenerator<ECKey> {
 	
@@ -80,6 +80,8 @@ public class ECKeyGenerator extends JWKGenerator<ECKey> {
 			if (keyStore != null) {
 				// For PKCS#11
 				generator = KeyPairGenerator.getInstance("EC", keyStore.getProvider());
+			} else if (provider != null) {
+				generator = KeyPairGenerator.getInstance("EC", provider);
 			} else {
 				generator = KeyPairGenerator.getInstance("EC");
 			}
@@ -100,6 +102,9 @@ public class ECKeyGenerator extends JWKGenerator<ECKey> {
 			.keyUse(use)
 			.keyOperations(ops)
 			.algorithm(alg)
+			.expirationTime(exp)
+			.notBeforeTime(nbf)
+			.issueTime(iat)
 			.keyStore(keyStore);
 		
 		if (x5tKid) {

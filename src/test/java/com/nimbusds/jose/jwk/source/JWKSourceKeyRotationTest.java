@@ -126,14 +126,26 @@ public class JWKSourceKeyRotationTest {
 		}
 		
 		try {
-			for(JWKReaderThread runner : runners) {
+			// NOTE: The below is an attempt to make this test more robust
+			// when running in the cloud (where CPU time / memory might 
+			// differ from run to run).
+			
+			// start one thread, then determine the deadline
+			JWKReaderThread firstThread = runners.get(0);
+			firstThread.start();
+			
+			long deadline = System.currentTimeMillis() + numberOfRotations * keyTimeToLive;
+			
+			for(int i = 1; i < runners.size(); i++) {
+				JWKReaderThread runner = runners.get(i);
 				runner.start();
 			}
+
 			rotationJWKSetSource.start();
 			
 			LOGGER.info("Started " + threads + " reader threads");
 			
-			runForDuration(runners, numberOfRotations * keyTimeToLive);
+			runUntilDeadline(runners, deadline);
 		} finally {
 			for(JWKReaderThread runner : runners) {
 				runner.close();
@@ -154,9 +166,11 @@ public class JWKSourceKeyRotationTest {
 		// verify that the underlying JWKSource was not invoked more than necessary
 		assertEquals(rotationJWKSetSource.getJWKSetRetrievals(), numberOfRotations);
 	}
-	
-	private void runForDuration(List<JWKReaderThread> runners, long duration) {
-		long deadline = System.currentTimeMillis() + duration;
+
+	private void runUntilDeadline(List<JWKReaderThread> runners, long deadline) {
+		long duration = deadline - System.currentTimeMillis();
+		
+		LOGGER.info("Run for " + duration + "ms");
 		
 		// if one thread fails, stop all threads so that we can read the error message.
 		while(System.currentTimeMillis() < deadline) {
@@ -171,7 +185,7 @@ public class JWKSourceKeyRotationTest {
 				break;
 			}
 			try {
-				Thread.sleep(1000);
+				Thread.sleep(100);
 				
 				long count = 0;
 				for(JWKReaderThread runner : runners) {

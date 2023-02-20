@@ -1024,4 +1024,14 @@ public class JWTClaimsSetTest extends TestCase {
 		
 		assertEquals(Collections.singletonList("https://server.example.org"), claimsSet.getStringListClaim("aud"));
 	}
+
+
+	public void testParseNormalizesSubjectToString() throws ParseException {
+
+		String claimsJSON = "{\"sub\": 1234}";
+
+		JWTClaimsSet jwtClaimsSet = JWTClaimsSet.parse(claimsJSON);
+
+		assertEquals("1234", jwtClaimsSet.getClaim(JWTClaimNames.SUBJECT));
+	}
 }

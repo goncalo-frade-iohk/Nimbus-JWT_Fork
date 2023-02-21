@@ -1535,3 +1535,8 @@ version 9.30.1 (2023-01-31)
 version 9.30.2 (2023-02-15)
     * CachedObject.computeExpirationTime must return Long.MAX_VALUE when the
       sum of the current time and TTL wraps around (iss #510).
+
+version 9.31 (2023-02-21)
+    * Updates JWTClaimsSet.parse to allow "sub" values that are JSON numbers,
+      will be converted to string. Intended to enable interoperability with JWT
+      libraries that output JSON numbers in the "sub" claim.

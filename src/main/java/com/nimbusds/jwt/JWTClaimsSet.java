@@ -942,6 +942,9 @@ public final class JWTClaimsSet implements Serializable {
 					if (subValue instanceof String) {
 						builder.subject(JSONObjectUtils.getString(json, JWTClaimNames.SUBJECT));
 					} else if (subValue instanceof Number) {
+						// Numbers not allowed per JWT spec, compromise
+						// to enable interop with non-compliant libs
+						// https://www.rfc-editor.org/rfc/rfc7519#section-4.1.2
 						builder.subject(String.valueOf(subValue));
 					} else if (subValue == null) {
 						builder.subject(null);

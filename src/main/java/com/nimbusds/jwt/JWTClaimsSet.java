@@ -938,7 +938,14 @@ public final class JWTClaimsSet implements Serializable {
 					builder.issuer(JSONObjectUtils.getString(json, JWTClaimNames.ISSUER));
 					break;
 				case JWTClaimNames.SUBJECT:
-					builder.subject(JSONObjectUtils.getString(json, JWTClaimNames.SUBJECT));
+					Object subValue = json.get(JWTClaimNames.SUBJECT);
+					if (subValue instanceof String) {
+						builder.subject(JSONObjectUtils.getString(json, JWTClaimNames.SUBJECT));
+					} else if (subValue instanceof Number) {
+						builder.subject(String.valueOf(subValue));
+					} else if (subValue == null) {
+						builder.subject(null);
+					}
 					break;
 				case JWTClaimNames.AUDIENCE:
 					Object audValue = json.get(JWTClaimNames.AUDIENCE);

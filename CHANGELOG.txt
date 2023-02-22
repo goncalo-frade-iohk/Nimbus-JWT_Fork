@@ -1540,3 +1540,5 @@ version 9.31 (2023-02-21)
     * Updates JWTClaimsSet.parse to allow "sub" values that are JSON numbers,
       will be converted to string. Intended to enable interoperability with JWT
       libraries that output JSON numbers in the "sub" claim.
+    * JWTClaimsSet.parse must throw ParseException on "sub" and "aud" claims of
+      illegal JSON type (iss #511).

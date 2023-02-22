@@ -1051,4 +1051,30 @@ public class JWTClaimsSetTest extends TestCase {
 
 		assertTrue(jwtClaimsSet.getAudience().isEmpty());
 	}
+	
+	
+	public void testParseBooleanSubject() {
+		
+		String claimsJSON = "{\"sub\": true}";
+		
+		try {
+			JWTClaimsSet.parse(claimsJSON);
+			fail();
+		} catch (ParseException e) {
+			assertEquals("Unexpected type of sub claim", e.getMessage());
+		}
+	}
+	
+	
+	public void testParseBooleanAudience() {
+		
+		String claimsJSON = "{\"aud\": true}";
+		
+		try {
+			JWTClaimsSet.parse(claimsJSON);
+			fail();
+		} catch (ParseException e) {
+			assertEquals("Unexpected type of aud claim", e.getMessage());
+		}
+	}
 }

@@ -25,6 +25,7 @@ import java.util.logging.Logger;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 import org.junit.Test;
 
@@ -126,54 +127,43 @@ public class JWKSourceKeyRotationTest {
 		}
 		
 		try {
-			// NOTE: The below is an attempt to make this test more robust
-			// when running in the cloud (where CPU time / memory might 
-			// differ from run to run).
-			
-			// start one thread, then determine the deadline
-			JWKReaderThread firstThread = runners.get(0);
-			firstThread.start();
-			
-			long deadline = System.currentTimeMillis() + numberOfRotations * keyTimeToLive;
-			
-			for(int i = 1; i < runners.size(); i++) {
-				JWKReaderThread runner = runners.get(i);
-				runner.start();
+			for (JWKReaderThread jwkReaderThread : runners) {
+				jwkReaderThread.start();
 			}
 
 			rotationJWKSetSource.start();
 			
 			LOGGER.info("Started " + threads + " reader threads");
 			
-			runUntilDeadline(runners, deadline);
+			run(rotationJWKSetSource, runners);
 		} finally {
 			for(JWKReaderThread runner : runners) {
 				runner.close();
 			}
 			rotationJWKSetSource.close();
+			rotationJWKSetSource.join();
 			
 			for(JWKReaderThread runner : runners) {
 				runner.join();
 			}
-			rotationJWKSetSource.join();
 		}
 		
 		// verify that all threads did get the right key all the time
 		for(JWKReaderThread runner : runners) {
 			assertFalse(runner.isFailed());
+			assertTrue(runner.getCounter() > 0);
 		}
 		
 		// verify that the underlying JWKSource was not invoked more than necessary
 		assertEquals(rotationJWKSetSource.getJWKSetRetrievals(), numberOfRotations);
 	}
 
-	private void runUntilDeadline(List<JWKReaderThread> runners, long deadline) {
-		long duration = deadline - System.currentTimeMillis();
-		
-		LOGGER.info("Run for " + duration + "ms");
-		
+	private void run(RotationJWKSetSource<?> rotationJWKSetSource, List<JWKReaderThread> runners) {
 		// if one thread fails, stop all threads so that we can read the error message.
-		while(System.currentTimeMillis() < deadline) {
+
+		// log stats on key change 
+		String currentKeyId = null;
+		while(rotationJWKSetSource.isAlive()) {
 			boolean allThreadsAlive = true;
 			for(JWKReaderThread runner : runners) {
 				if (!runner.isAlive()) {
@@ -187,12 +177,16 @@ public class JWKSourceKeyRotationTest {
 			try {
 				Thread.sleep(100);
 				
-				long count = 0;
-				for(JWKReaderThread runner : runners) {
-					count += runner.getCounter();
+				if(currentKeyId != rotationJWKSetSource.getKeyID()) {
+					currentKeyId = rotationJWKSetSource.getKeyID();
+					
+					long count = 0;
+					for(JWKReaderThread runner : runners) {
+						count += runner.getCounter();
+					}
+					
+					LOGGER.info("JWK set was fetched " + count + " times");
 				}
-				
-				LOGGER.info("JWK set was fetched " + count + " times");
 			} catch (InterruptedException ignored) {
 				// ignore
 			}

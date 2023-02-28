@@ -19,6 +19,7 @@ package com.nimbusds.jose.jwk.source;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -179,26 +180,13 @@ public class JWKSourceUnknownKeysTest {
 		allThreads.addAll(unknownKeyThreads);
 		
 		try {
-			// NOTE: The below is an attempt to make this test more robust
-			// when running in the cloud (where CPU time / memory might 
-			// differ from run to run).
-			
-			// start one thread, then determine the deadline
-			AbstractKeyJWKReaderThread firstThread = allThreads.get(0);
-			firstThread.start();
-			
-			long deadline = System.currentTimeMillis() + keyTimeToLive * iterations + 1;
-			
-			for(int i = 1; i < allThreads.size(); i++) {
-				AbstractKeyJWKReaderThread thread = allThreads.get(i);
+			for(AbstractKeyJWKReaderThread thread : allThreads) {
 				thread.start();
 			}
 			
 			LOGGER.info("Started " + allThreads.size() + " reader threads");
 
-			// note:
-			// iteration count * duration < run time < (iteration count + 1) * duration
-			runUntilDeadline(allThreads, deadline); 
+			run(jwkSetSource, (iterations + 1) * 2, allThreads, keyTimeToLive * iterations * 2); 
 		} finally {
 			for(AbstractKeyJWKReaderThread runner : allThreads) {
 				runner.close();
@@ -212,47 +200,60 @@ public class JWKSourceUnknownKeysTest {
 		// did get the right key all the time
 		for(KnownKeyJWKReaderThread runner : knownKeyThreads) {
 			assertFalse(runner.isFailed());
+			assertTrue(runner.getCounter() > 0);
 		}
 
 		// verify that all threads which requested an unknown key
 		// did NOT get the right key all the time
 		for(UnknownKeyJWKReaderThread runner : unknownKeyThreads) {
 			assertFalse(runner.isFailed());
+			assertEquals(0, runner.getCounter());
 		}
 		
 		assertEquals( (iterations + 1) * 2, jwkSetSource.getCount());
 	}
 	
-	private void runUntilDeadline(List<AbstractKeyJWKReaderThread> runners, long deadline) {
-		long duration = deadline - System.currentTimeMillis();
-		
-		LOGGER.info("Run for " + duration + "ms");
-
+	private void run(CountingJWKSetSource<?> jwkSetSource, long jwkRefreshLimit, List<AbstractKeyJWKReaderThread> runners, long timeout) {
 		// if one thread fails, stop all threads so that we can read the error message.
+
+		long deadline = System.currentTimeMillis() + timeout;
+		
+		// log stats on fetch count change 
+		long jwkRefreshCount = -1L;
 		while(System.currentTimeMillis() < deadline) {
 			boolean allThreadsAlive = true;
 			for(AbstractKeyJWKReaderThread runner : runners) {
 				if (!runner.isAlive()) {
 					allThreadsAlive = false;
-					break;
 				}
 			}
 			
 			if(!allThreadsAlive) {
-				LOGGER.info("All threads are not alived");
 				break;
 			}
 			try {
 				Thread.sleep(100);
 				
-				long count = 0;
-				for(AbstractKeyJWKReaderThread runner : runners) {
-					count += runner.getCounter();
+				long currentJwkRefreshCount = jwkSetSource.getCount();
+				if(currentJwkRefreshCount >= jwkRefreshLimit) {
+					break;
 				}
 				
-				LOGGER.info("JWK set was attempted fetched " + count + " times");
+				if(currentJwkRefreshCount != jwkRefreshCount) {
+					jwkRefreshCount = currentJwkRefreshCount;
+					
+					long count = 0;
+					for(AbstractKeyJWKReaderThread runner : runners) {
+						count += runner.getCounter();
+					}
+					
+					LOGGER.info("JWK set was fetched " + count + " times");
+
+				}
 			} catch (InterruptedException ignored) {
+				// ignore
 			}
 		}
 	}
+
 }

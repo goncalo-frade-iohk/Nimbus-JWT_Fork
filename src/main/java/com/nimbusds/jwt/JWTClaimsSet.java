@@ -27,9 +27,9 @@ import java.util.*;
 import net.jcip.annotations.Immutable;
 
 import com.nimbusds.jose.Payload;
-import com.nimbusds.jwt.util.DateUtils;
 import com.nimbusds.jose.util.JSONArrayUtils;
 import com.nimbusds.jose.util.JSONObjectUtils;
+import com.nimbusds.jwt.util.DateUtils;
 
 
 /**
@@ -938,7 +938,19 @@ public final class JWTClaimsSet implements Serializable {
 					builder.issuer(JSONObjectUtils.getString(json, JWTClaimNames.ISSUER));
 					break;
 				case JWTClaimNames.SUBJECT:
-					builder.subject(JSONObjectUtils.getString(json, JWTClaimNames.SUBJECT));
+					Object subValue = json.get(JWTClaimNames.SUBJECT);
+					if (subValue instanceof String) {
+						builder.subject(JSONObjectUtils.getString(json, JWTClaimNames.SUBJECT));
+					} else if (subValue instanceof Number) {
+						// Numbers not allowed per JWT spec, compromise
+						// to enable interop with non-compliant libs
+						// https://www.rfc-editor.org/rfc/rfc7519#section-4.1.2
+						builder.subject(String.valueOf(subValue));
+					} else if (subValue == null) {
+						builder.subject(null);
+					} else {
+						throw new ParseException("Unexpected type of " + JWTClaimNames.SUBJECT + " claim", 0);
+					}
 					break;
 				case JWTClaimNames.AUDIENCE:
 					Object audValue = json.get(JWTClaimNames.AUDIENCE);
@@ -950,6 +962,8 @@ public final class JWTClaimsSet implements Serializable {
 						builder.audience(JSONObjectUtils.getStringList(json, JWTClaimNames.AUDIENCE));
 					} else if (audValue == null) {
 						builder.audience((String) null);
+					} else {
+						throw new ParseException("Unexpected type of " + JWTClaimNames.AUDIENCE + " claim", 0);
 					}
 					break;
 				case JWTClaimNames.EXPIRATION_TIME:

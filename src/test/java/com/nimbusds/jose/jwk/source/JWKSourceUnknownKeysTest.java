@@ -174,25 +174,36 @@ public class JWKSourceUnknownKeysTest {
 			unknownKeyThreads.add(runner);
 		}
 
-		List<AbstractKeyJWKReaderThread> startedThreads = new ArrayList<>();
-		startedThreads.addAll(knownKeyThreads);
-		startedThreads.addAll(unknownKeyThreads);
+		List<AbstractKeyJWKReaderThread> allThreads = new ArrayList<>();
+		allThreads.addAll(knownKeyThreads);
+		allThreads.addAll(unknownKeyThreads);
 		
 		try {
-			for(AbstractKeyJWKReaderThread runner : startedThreads) {
-				runner.start();
+			// NOTE: The below is an attempt to make this test more robust
+			// when running in the cloud (where CPU time / memory might 
+			// differ from run to run).
+			
+			// start one thread, then determine the deadline
+			AbstractKeyJWKReaderThread firstThread = allThreads.get(0);
+			firstThread.start();
+			
+			long deadline = System.currentTimeMillis() + keyTimeToLive * iterations + 1;
+			
+			for(int i = 1; i < allThreads.size(); i++) {
+				AbstractKeyJWKReaderThread thread = allThreads.get(i);
+				thread.start();
 			}
 			
-			LOGGER.info("Started " + startedThreads.size() + " reader threads");
+			LOGGER.info("Started " + allThreads.size() + " reader threads");
 
 			// note:
 			// iteration count * duration < run time < (iteration count + 1) * duration
-			runForDuration(startedThreads, keyTimeToLive * iterations + 1); 
+			runUntilDeadline(allThreads, deadline); 
 		} finally {
-			for(AbstractKeyJWKReaderThread runner : startedThreads) {
+			for(AbstractKeyJWKReaderThread runner : allThreads) {
 				runner.close();
 			}
-			for(AbstractKeyJWKReaderThread runner : startedThreads) {
+			for(AbstractKeyJWKReaderThread runner : allThreads) {
 				runner.join();
 			}
 		}
@@ -212,9 +223,9 @@ public class JWKSourceUnknownKeysTest {
 		assertEquals( (iterations + 1) * 2, jwkSetSource.getCount());
 	}
 	
-	private void runForDuration(List<AbstractKeyJWKReaderThread> runners, long duration) {
-		long deadline = System.currentTimeMillis() + duration;
-
+	private void runUntilDeadline(List<AbstractKeyJWKReaderThread> runners, long deadline) {
+		long duration = deadline - System.currentTimeMillis();
+		
 		LOGGER.info("Run for " + duration + "ms");
 
 		// if one thread fails, stop all threads so that we can read the error message.
@@ -232,7 +243,7 @@ public class JWKSourceUnknownKeysTest {
 				break;
 			}
 			try {
-				Thread.sleep(1000);
+				Thread.sleep(100);
 				
 				long count = 0;
 				for(AbstractKeyJWKReaderThread runner : runners) {

@@ -34,7 +34,7 @@ import junit.framework.TestCase;
  *
  * @author Vladimir Dzhuvinov
  * @author Justin Richer
- * @version 2022-01-24
+ * @version 2022-02-21
  */
 public class JWTClaimsSetTest extends TestCase {
 
@@ -1023,5 +1023,58 @@ public class JWTClaimsSetTest extends TestCase {
 		}
 		
 		assertEquals(Collections.singletonList("https://server.example.org"), claimsSet.getStringListClaim("aud"));
+	}
+
+	public void testParseNormalizesSubjectNumberToString() throws ParseException {
+
+		String claimsJSON = "{\"sub\": 1234}";
+
+		JWTClaimsSet jwtClaimsSet = JWTClaimsSet.parse(claimsJSON);
+
+		assertEquals("1234", jwtClaimsSet.getClaim(JWTClaimNames.SUBJECT));
+	}
+
+	public void testParseNullSubject() throws ParseException {
+
+		String claimsJSON = "{\"sub\": null}";
+
+		JWTClaimsSet jwtClaimsSet = JWTClaimsSet.parse(claimsJSON);
+
+		assertNull(jwtClaimsSet.getSubject());
+	}
+
+	public void testParseNullAudience() throws ParseException {
+
+		String claimsJSON = "{\"aud\": null}";
+
+		JWTClaimsSet jwtClaimsSet = JWTClaimsSet.parse(claimsJSON);
+
+		assertTrue(jwtClaimsSet.getAudience().isEmpty());
+	}
+	
+	
+	public void testParseBooleanSubject() {
+		
+		String claimsJSON = "{\"sub\": true}";
+		
+		try {
+			JWTClaimsSet.parse(claimsJSON);
+			fail();
+		} catch (ParseException e) {
+			assertEquals("Unexpected type of sub claim", e.getMessage());
+		}
+	}
+	
+	
+	public void testParseBooleanAudience() {
+		
+		String claimsJSON = "{\"aud\": true}";
+		
+		try {
+			JWTClaimsSet.parse(claimsJSON);
+			fail();
+		} catch (ParseException e) {
+			assertEquals("Unexpected type of aud claim", e.getMessage());
+		}
 	}
 }

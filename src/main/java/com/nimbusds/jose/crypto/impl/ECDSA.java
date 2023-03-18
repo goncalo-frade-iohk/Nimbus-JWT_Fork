@@ -24,10 +24,12 @@ import java.security.Provider;
 import java.security.Signature;
 import java.security.interfaces.ECKey;
 import java.security.spec.ECParameterSpec;
+import java.util.Arrays;
 import java.util.Set;
 
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
+import com.nimbusds.jose.crypto.utils.Secp256k1Scalar;
 import com.nimbusds.jose.jwk.Curve;
 import com.nimbusds.jose.jwk.ECParameterTable;
 import com.nimbusds.jose.util.ByteUtils;
@@ -321,6 +323,46 @@ public class ECDSA {
 				throw e;
 			}
 			
+			throw new JOSEException(e.getMessage(), e);
+		}
+	}
+
+	public static byte[] transcodeSignatureToDERBitcoin(final byte[] jwsSignature) throws JOSEException {
+		try {
+			int rawLen = jwsSignature.length / 2;
+
+			BigInteger bigR = new BigInteger(1, Arrays.copyOfRange(jwsSignature, 0, rawLen));
+			BigInteger bigS = new BigInteger(1, Arrays.copyOfRange(jwsSignature, rawLen, jwsSignature.length));
+			byte[] r = bigR.toByteArray();
+			byte[] s = bigS.toByteArray();
+
+			r = Secp256k1Scalar.reverseB32(r);
+			s = Secp256k1Scalar.reverseB32(s);
+
+			int lenR = r.length;
+			int lenS = s.length;
+
+			int derLength = 6 + lenR + lenS;
+			byte[] derSignature = new byte[derLength];
+
+			derSignature[0] = 0x30;
+			derSignature[1] = (byte) (4 + lenR + lenS);
+			derSignature[2] = 0x02;
+			derSignature[3] = (byte) lenR;
+			System.arraycopy(r, 0, derSignature, 4, lenR);
+			derSignature[4 + lenR] = 0x02;
+			derSignature[5 + lenR] = (byte) lenS;
+			System.arraycopy(s, 0, derSignature, 6 + lenR, lenS);
+
+			return derSignature;
+
+		} catch (Exception e) {
+			// Watch for unchecked exceptions
+
+			if (e instanceof JOSEException) {
+				throw e;
+			}
+
 			throw new JOSEException(e.getMessage(), e);
 		}
 	}

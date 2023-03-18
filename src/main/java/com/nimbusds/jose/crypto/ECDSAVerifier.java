@@ -198,6 +198,35 @@ public class ECDSAVerifier extends ECDSAProvider implements JWSVerifier, Critica
 		try {
 			sig.initVerify(publicKey);
 			sig.update(signedContent);
+			if (sig.verify(derSignature)) {
+				return true;
+			} else if (alg == JWSAlgorithm.ES256K) {
+				return verifyBitcoinSignature(alg, signedContent, jwsSignature);
+			} else {
+				return false;
+			}
+
+		} catch (InvalidKeyException e) {
+			throw new JOSEException("Invalid EC public key: " + e.getMessage(), e);
+		} catch (SignatureException e) {
+			return verifyBitcoinSignature(alg, signedContent, jwsSignature);
+		}
+	}
+
+	private boolean verifyBitcoinSignature(JWSAlgorithm alg, byte[] signedContent, byte[] jwsSignature) throws JOSEException {
+		final byte[] derSignature;
+		try {
+			derSignature = ECDSA.transcodeSignatureToDERBitcoin(jwsSignature);
+		} catch (JOSEException e) {
+			// Invalid signature format
+			return false;
+		}
+
+		Signature sig = ECDSA.getSignerAndVerifier(alg, getJCAContext().getProvider());
+
+		try {
+			sig.initVerify(publicKey);
+			sig.update(signedContent);
 			return sig.verify(derSignature);
 
 		} catch (InvalidKeyException e) {
